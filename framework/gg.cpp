@@ -119,7 +119,7 @@ const Color3F Color3F::BLUE       = Color3F(0, 0, 1);
 const Color3F Color3F::YELLOW     = Color3F(1, 1, 0);
 const Color3F Color3F::AQUA       = Color3F(0, 1, 1);
 const Color3F Color3F::MAGENTA    = Color3F(1, 0, 1);
-const Color3F Color3F::ORANGE       = Color3F(1, 0.647, 0);
+const Color3F Color3F::ORANGE     = Color3F(1, 0.647, 0);
 const Color3F Color3F::GRAY       = Color3F(0.5, 0.5, 0.5);
 
 Color3F::Color3F(float r, float g, float b) : r(r), g(g), b(b) {
