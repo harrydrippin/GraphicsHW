@@ -12,8 +12,8 @@ void MainScene::initialized() {
     v.push_back(Vec3(-0.5f, -0.5f, -1.0f));
 
     c.push_back(Color3F::GREEN);
-    c.push_back(Color3F::RED);
-    c.push_back(Color3F::MAGENTA);
+    c.push_back(Color3F::GREEN);
+    c.push_back(Color3F::GREEN);
 }
 
 void MainScene::update() {
