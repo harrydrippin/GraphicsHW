@@ -13,7 +13,7 @@ void MainScene::initialized() {
 
     c.push_back(Color3F::GREEN);
     c.push_back(Color3F::RED);
-    c.push_back(Color3F::ORANGE);
+    c.push_back(Color3F::MAGENTA);
 }
 
 void MainScene::update() {
