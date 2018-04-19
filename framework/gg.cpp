@@ -28,7 +28,8 @@ bool Application::initialize(const std::string &title, int width, int height, in
 
     glEnable(GL_DEPTH_TEST);
 
-    glutDisplayFunc(mainLoop);
+    glutDisplayFunc(Application::display);
+    glutIdleFunc(Application::idle);
 
     return true;
 }
@@ -41,12 +42,18 @@ int Application::run(Scene * scene) {
     return 0;
 }
 
-void Application::mainLoop() {
+void Application::display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    Director::getInstance()->loop();
+    Director::getInstance()->display();
 
     glutSwapBuffers();
+}
+
+void Application::idle() {
+    Director::getInstance()->loop();
+
+    glutPostRedisplay();
 }
 
 #pragma endregion
@@ -74,6 +81,10 @@ void Director::setScene(Scene * scene) {
 
     _currentScene = scene;
     _currentScene->initialized();
+}
+
+void Director::display() {
+    _currentScene->draw();
 }
 
 void Director::loop() {

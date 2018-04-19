@@ -19,7 +19,8 @@ public:
     int run(Scene * scene);
 
 private:
-    static void mainLoop();
+    static void display();
+    static void idle();
 
 };
 
@@ -32,6 +33,9 @@ class Scene;
 class Director {
 public:
     static Director * getInstance();
+
+    // current scene's display
+    void display();
 
     // current scene's loop
     void loop();
@@ -59,6 +63,7 @@ public:
     virtual void initialized() = 0;
     virtual void released() {};
     virtual void update() {};
+    virtual void draw() {};
 
     void release();
 

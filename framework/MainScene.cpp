@@ -17,6 +17,11 @@ void MainScene::initialized() {
 }
 
 void MainScene::update() {
+    v.front().x -= 0.01;
+}
+
+void MainScene::draw() {
+
     drawVertices(v.data(), v.size(), c.data(), c.size());
 }
 

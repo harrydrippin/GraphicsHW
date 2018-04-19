@@ -8,6 +8,7 @@ public:
 
     void initialized();
     void update();
+    void draw();
     void released();
 
 private:
