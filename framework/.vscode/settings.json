@@ -13,6 +13,11 @@
         "new": "cpp",
         "stdexcept": "cpp",
         "typeinfo": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "functional": "cpp",
+        "utility": "cpp",
+        "map": "cpp",
+        "iterator": "cpp",
+        "__bit_reference": "cpp"
     }
 }

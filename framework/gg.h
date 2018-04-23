@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <map>
 
 #pragma region Application
 
@@ -286,19 +287,33 @@ typedef Matrix<4, 4> Mat4;
 
 #pragma endregion
 
-#pragma region Color3F
+#pragma region Color
 
-class Color3F {
+// class Color3F {
+// public:
+//     float r, g, b;
+
+// public:
+//     Color3F(float r, float g, float b);
+//     Color3F();
+//     Color3F(const Color3F &other);
+
+// public:
+//     static const Color3F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
+
+// };
+
+class Color4F {
 public:
-    float r, g, b;
+    float r, g, b, a;
 
 public:
-    Color3F(float r, float g, float b);
-    Color3F();
-    Color3F(const Color3F &other);
+    Color4F(float r, float g, float b, float a);
+    Color4F();
+    Color4F(const Color4F &other);
 
 public:
-    static const Color3F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
+    static const Color4F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
 
 };
 
@@ -408,6 +423,42 @@ Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
 
 #pragma endregion
 
-void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize);
+#pragma region Shader
+
+class Shader {
+public:
+    static Shader * create(const std::string &vert, const std::string &frag);
+
+    void addUniform(const std::string &uniform);
+    void addAttrib(const std::string &attrib);
+
+    GLuint getUniformLocation(const std::string &uniform) const;
+    GLuint getAttribLocation(const std::string &attrib) const;
+
+    void enable();
+    void disable();
+
+    GLuint getProgram() const;
+
+    void release();
+
+protected:
+    virtual void initWithFile(const std::string &vert, const std::string &frag);
+
+    GLuint createShaderFromFile(const std::string &file, GLuint shaderType);
+
+protected:
+    GLuint _program;
+
+    std::map<std::string, GLuint> _uniformLocations, _attribLocations;
+    // std::map<std::string, 
+
+};
+
+#pragma endregion
+
+
+
+// void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize);
 
 #endif

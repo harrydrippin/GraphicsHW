@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <functional>
+#include <fstream>
 
 using namespace std;
 
@@ -64,7 +65,6 @@ Director Director::_instance;
 
 Director::~Director() {
     if (_currentScene) {
-        _currentScene->released();
         _currentScene->release();
     }
 }
@@ -75,7 +75,6 @@ Director * Director::getInstance() {
 
 void Director::setScene(Scene * scene) {
     if (_currentScene) {
-        _currentScene->released();
         _currentScene->release();
     }
 
@@ -96,6 +95,7 @@ void Director::loop() {
 #pragma region Scene
 
 void Scene::release() {
+    this->released();
     delete this;
 }
 
@@ -103,27 +103,51 @@ void Scene::release() {
 
 #pragma region Color
 
-const Color3F Color3F::BLACK      = Color3F(0, 0, 0);
-const Color3F Color3F::WHITE      = Color3F(1, 1, 1);
-const Color3F Color3F::RED        = Color3F(1, 0, 0);
-const Color3F Color3F::GREEN      = Color3F(0, 1, 0);
-const Color3F Color3F::BLUE       = Color3F(0, 0, 1);
-const Color3F Color3F::YELLOW     = Color3F(1, 1, 0);
-const Color3F Color3F::AQUA       = Color3F(0, 1, 1);
-const Color3F Color3F::MAGENTA    = Color3F(1, 0, 1);
-const Color3F Color3F::ORANGE     = Color3F(1, 0.647, 0);
-const Color3F Color3F::GRAY       = Color3F(0.5, 0.5, 0.5);
+// const Color3F Color3F::BLACK      = Color3F(0, 0, 0);
+// const Color3F Color3F::WHITE      = Color3F(1, 1, 1);
+// const Color3F Color3F::RED        = Color3F(1, 0, 0);
+// const Color3F Color3F::GREEN      = Color3F(0, 1, 0);
+// const Color3F Color3F::BLUE       = Color3F(0, 0, 1);
+// const Color3F Color3F::YELLOW     = Color3F(1, 1, 0);
+// const Color3F Color3F::AQUA       = Color3F(0, 1, 1);
+// const Color3F Color3F::MAGENTA    = Color3F(1, 0, 1);
+// const Color3F Color3F::ORANGE     = Color3F(1, 0.647, 0);
+// const Color3F Color3F::GRAY       = Color3F(0.5, 0.5, 0.5);
 
-Color3F::Color3F(float r, float g, float b) : r(r), g(g), b(b) {
+// Color3F::Color3F(float r, float g, float b) : r(r), g(g), b(b) {
+// }
+
+// Color3F::Color3F() : r(0), g(0), b(0) {
+// }
+
+// Color3F::Color3F(const Color3F &other) {
+//     this->r = other.r;
+//     this->g = other.g;
+//     this->b = other.b;
+// }
+
+const Color4F Color4F::BLACK      = Color4F(0, 0, 0, 1);
+const Color4F Color4F::WHITE      = Color4F(1, 1, 1, 1);
+const Color4F Color4F::RED        = Color4F(1, 0, 0, 1);
+const Color4F Color4F::GREEN      = Color4F(0, 1, 0, 1);
+const Color4F Color4F::BLUE       = Color4F(0, 0, 1, 1);
+const Color4F Color4F::YELLOW     = Color4F(1, 1, 0, 1);
+const Color4F Color4F::AQUA       = Color4F(0, 1, 1, 1);
+const Color4F Color4F::MAGENTA    = Color4F(1, 0, 1, 1);
+const Color4F Color4F::ORANGE     = Color4F(1, 0.647, 0, 1);
+const Color4F Color4F::GRAY       = Color4F(0.5, 0.5, 0.5, 1);
+
+Color4F::Color4F(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {
 }
 
-Color3F::Color3F() : r(0), g(0), b(0) {
+Color4F::Color4F() : r(0), g(0), b(0), a(0) {
 }
 
-Color3F::Color3F(const Color3F &other) {
+Color4F::Color4F(const Color4F &other) {
     this->r = other.r;
     this->g = other.g;
     this->b = other.b;
+    this->a = other.a;
 }
 
 #pragma endregion
@@ -250,12 +274,85 @@ Mat4 perspective(float fovy, float aspect, float zNear, float zFar) {
 
 #pragma endregion
 
-void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize) {
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glColorPointer(3, GL_FLOAT, 0, colors);
-    glVertexPointer(3, GL_FLOAT, 0, vertices);
-    glDrawArrays(GL_TRIANGLES, 0, vertexSize);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+#pragma region Shader
+
+Shader * Shader::create(const std::string &vert, const std::string &frag) {
+    auto ret = new Shader();
+
+    ret->initWithFile(vert, frag);
+        
+    return ret;
 }
+
+void Shader::initWithFile(const std::string &vert, const std::string &frag) {
+    GLuint vertexShader = createShaderFromFile(vert, GL_VERTEX_SHADER); 
+    GLuint fragmentShader = createShaderFromFile(frag, GL_FRAGMENT_SHADER);
+
+    _program = glCreateProgram();
+
+    glAttachShader(_program, vertexShader);
+    glAttachShader(_program, fragmentShader);
+    glLinkProgram(_program);
+}
+
+GLuint Shader::getProgram() const {
+    return _program;
+}
+
+GLuint Shader::createShaderFromFile(const std::string &file, GLuint shaderType) {
+    GLuint ret = glCreateShader(shaderType);
+
+    std::ifstream shaderFile(file.c_str());
+    std::string shaderString;
+    shaderString.assign(std::istreambuf_iterator<char>(shaderFile), std::istreambuf_iterator<char>());
+
+    const GLchar *shaderSrc = shaderString.c_str();
+
+    glShaderSource(ret, 1, (const GLchar**)&shaderSrc, NULL);
+    glCompileShader(ret);
+
+    return ret;
+}
+
+void Shader::addUniform(const std::string &uniform) {
+    _uniformLocations[uniform] = glGetUniformLocation(_program, uniform.c_str());
+}
+
+void Shader::addAttrib(const std::string &attrib) {
+    _attribLocations[attrib] = glGetAttribLocation(_program, attrib.c_str());
+}
+
+GLuint Shader::getUniformLocation(const std::string &uniform) const {
+    return _uniformLocations.at(uniform);
+}
+
+GLuint Shader::getAttribLocation(const std::string &attrib) const {
+    return _attribLocations.at(attrib);
+}
+
+void Shader::enable() {
+    for (auto i : _attribLocations) glEnableVertexAttribArray(i.second);
+}
+
+void Shader::disable() {
+    for (auto i : _attribLocations) glDisableVertexAttribArray(i.second);
+}
+
+void Shader::release() {
+    _uniformLocations.clear();
+    _attribLocations.clear();
+
+    delete this;
+}
+
+#pragma endregion
+
+// void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize) {
+//     glEnableClientState(GL_COLOR_ARRAY);
+//     glEnableClientState(GL_VERTEX_ARRAY);
+//     glColorPointer(3, GL_FLOAT, 0, colors);
+//     glVertexPointer(3, GL_FLOAT, 0, vertices);
+//     glDrawArrays(GL_TRIANGLES, 0, vertexSize);
+//     glDisableClientState(GL_VERTEX_ARRAY);
+//     glDisableClientState(GL_COLOR_ARRAY);
+// }

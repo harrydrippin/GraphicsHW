@@ -12,7 +12,11 @@ public:
     void released();
 
 private:
-    std::vector<Vec3> v;
-    std::vector<Color3F> c;
+    std::vector<Vec4> v;
+    std::vector<Color4F> c;
+
+    Mat4 modelMatrix;
+
+    Shader * shader;
 
 };
