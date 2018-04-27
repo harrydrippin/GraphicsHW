@@ -18,6 +18,10 @@
         "utility": "cpp",
         "map": "cpp",
         "iterator": "cpp",
-        "__bit_reference": "cpp"
+        "__bit_reference": "cpp",
+        "__tree": "cpp",
+        "bitset": "cpp",
+        "atomic": "cpp",
+        "system_error": "cpp"
     }
 }

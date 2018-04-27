@@ -438,6 +438,9 @@ public:
     void enable();
     void disable();
 
+    void use();
+    void unUse();
+
     GLuint getProgram() const;
 
     void release();
@@ -457,8 +460,37 @@ protected:
 
 #pragma endregion
 
+#pragma region Primitives
 
+class Primitives {
+public:
+    Primitives(float width);
 
-// void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize);
+    static Primitives * create(float width = 1.0f);
+
+    void drawPoint(const Vec4 &pos, float size, const Color4F &color);
+    void drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color);
+    void drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color);
+
+    void draw();
+
+    void clear();
+
+    void release();
+
+protected:
+    bool init();
+
+protected:
+    float _width;
+
+    std::vector<Vec4> _vertices;
+    std::vector<Color4F> _colors;
+
+};
+
+#pragma endregion
+
+void drawVertices(Vec4 *vertices, int vertexSize, Color4F *colors, int colorSize);
 
 #endif

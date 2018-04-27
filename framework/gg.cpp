@@ -25,7 +25,8 @@ bool Application::initialize(const std::string &title, int width, int height, in
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    glOrtho(-1.0, 1.0, -1.0, 1.0, 0.1, 1000.0);
+    glOrtho(0, width, 0, height, -1, 1);
+    // glOrtho(-1, 1, -1, 1, -1, 1);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -338,6 +339,14 @@ void Shader::disable() {
     for (auto i : _attribLocations) glDisableVertexAttribArray(i.second);
 }
 
+void Shader::use() {
+    glUseProgram(_program);
+}
+
+void Shader::unUse() {
+    glUseProgram(0);
+}
+
 void Shader::release() {
     _uniformLocations.clear();
     _attribLocations.clear();
@@ -347,12 +356,74 @@ void Shader::release() {
 
 #pragma endregion
 
-// void drawVertices(Vec3 *vertices, int vertexSize, Color3F *colors, int colorSize) {
-//     glEnableClientState(GL_COLOR_ARRAY);
-//     glEnableClientState(GL_VERTEX_ARRAY);
-//     glColorPointer(3, GL_FLOAT, 0, colors);
-//     glVertexPointer(3, GL_FLOAT, 0, vertices);
-//     glDrawArrays(GL_TRIANGLES, 0, vertexSize);
-//     glDisableClientState(GL_VERTEX_ARRAY);
-//     glDisableClientState(GL_COLOR_ARRAY);
-// }
+#pragma region Primitives
+
+Primitives::Primitives(float width) : _width(width) {
+}
+
+Primitives * Primitives::create(float width) {
+    auto ret = new Primitives(width);
+    ret->init();
+
+    return ret;
+}
+
+bool Primitives::init() {
+
+}
+
+void Primitives::drawPoint(const Vec4 &pos, float size, const Color4F &color) {
+
+}
+
+void Primitives::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) {
+    _vertices.push_back(p1);
+    _vertices.push_back(p2);
+
+    _colors.push_back(color);
+    _colors.push_back(color);
+}
+
+void Primitives::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
+    drawLine(Vec4(origin.x, origin.y, 0, 1), Vec4(dest.x, origin.y, 0, 1), color);
+    drawLine(Vec4(dest.x, origin.y, 0, 1), Vec4(dest.x, dest.y, 0, 1), color);
+    drawLine(Vec4(dest.x, dest.y, 0, 1), Vec4(origin.x, dest.y, 0, 1), color);
+    drawLine(Vec4(origin.x, dest.y, 0, 1), Vec4(origin.x, origin.y, 0, 1), color);
+}
+
+void Primitives::draw() {
+    glEnableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    glColorPointer(4, GL_FLOAT, 0, _colors.data());
+    glVertexPointer(4, GL_FLOAT, 0, _vertices.data());
+
+    glLineWidth(_width);
+    glDrawArrays(GL_LINES, 0, _vertices.size());
+    
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+}
+
+void Primitives::clear() {
+    _vertices.clear();
+    _colors.clear();
+}
+
+void Primitives::release() {
+    this->clear();
+
+    delete this;
+}
+
+#pragma endregion
+
+void drawVertices(Vec4 *vertices, int vertexSize, Color4F *colors, int colorSize) {
+    glEnableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glColorPointer(4, GL_FLOAT, 0, colors);
+    glVertexPointer(4, GL_FLOAT, 0, vertices);
+    glDrawArrays(GL_TRIANGLES, 0, vertexSize);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+}
