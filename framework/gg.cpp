@@ -377,11 +377,11 @@ void Primitives::drawPoint(const Vec4 &pos, float size, const Color4F &color) {
 }
 
 void Primitives::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) {
-    _vertices.push_back(p1);
-    _vertices.push_back(p2);
+    _lineVertices.push_back(p1);
+    _lineVertices.push_back(p2);
 
-    _colors.push_back(color);
-    _colors.push_back(color);
+    _lineColors.push_back(color);
+    _lineColors.push_back(color);
 }
 
 void Primitives::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
@@ -391,23 +391,51 @@ void Primitives::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color
     drawLine(Vec4(origin.x, dest.y, 0, 1), Vec4(origin.x, origin.y, 0, 1), color);
 }
 
+void Primitives::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
+    _polygonVertices.push_back(Vec4(origin.x, origin.y, 0, 1));
+    _polygonVertices.push_back(Vec4(dest.x, origin.y, 0, 1));
+    _polygonVertices.push_back(Vec4(origin.x, dest.y, 0, 1));
+
+    _polygonVertices.push_back(Vec4(dest.x, origin.y, 0, 1));
+    _polygonVertices.push_back(Vec4(dest.x, dest.y, 0, 1));
+    _polygonVertices.push_back(Vec4(origin.x, dest.y, 0, 1));
+
+    for (int i = 0; i < 6; i++) _polygonColors.push_back(color);
+}
+
 void Primitives::draw() {
+    // draw line
     glEnableClientState(GL_COLOR_ARRAY);
     glEnableClientState(GL_VERTEX_ARRAY);
 
-    glColorPointer(4, GL_FLOAT, 0, _colors.data());
-    glVertexPointer(4, GL_FLOAT, 0, _vertices.data());
+    glColorPointer(4, GL_FLOAT, 0, _lineColors.data());
+    glVertexPointer(4, GL_FLOAT, 0, _lineVertices.data());
 
     glLineWidth(_width);
-    glDrawArrays(GL_LINES, 0, _vertices.size());
+    glDrawArrays(GL_LINES, 0, _lineVertices.size());
+    
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+
+    // draw polygon
+    glEnableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    glColorPointer(4, GL_FLOAT, 0, _polygonColors.data());
+    glVertexPointer(4, GL_FLOAT, 0, _polygonVertices.data());
+
+    glDrawArrays(GL_TRIANGLES, 0, _polygonVertices.size());
     
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void Primitives::clear() {
-    _vertices.clear();
-    _colors.clear();
+    _lineVertices.clear();
+    _lineColors.clear();
+
+    _polygonVertices.clear();
+    _polygonColors.clear();
 }
 
 void Primitives::release() {

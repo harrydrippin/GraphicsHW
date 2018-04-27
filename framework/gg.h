@@ -472,6 +472,8 @@ public:
     void drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color);
     void drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color);
 
+    void drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color);
+
     void draw();
 
     void clear();
@@ -484,8 +486,8 @@ protected:
 protected:
     float _width;
 
-    std::vector<Vec4> _vertices;
-    std::vector<Color4F> _colors;
+    std::vector<Vec4> _lineVertices, _polygonVertices;
+    std::vector<Color4F> _lineColors, _polygonColors;
 
 };
 

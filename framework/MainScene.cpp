@@ -11,7 +11,8 @@ void MainScene::initialized() {
 
     rect = Primitives::create(2);
 
-    rect->drawRectangle(Vec4(origin.x, origin.y, 0, 1), Vec4(origin.x + 100, origin.y + 100, 0, 1), Color4F(0.1, 0.7, 0.8, 1));
+    rect->drawSolidRectangle(Vec4(origin.x, origin.y, 0, 1), Vec4(origin.x + 100, origin.y + 100, 0, 1), Color4F(0.1, 0.7, 0.8, 1));
+    rect->drawSolidRectangle(Vec4(20, 20, 0, 1), Vec4(120, 120, 0, 1), Color4F(0.4, 0.3, 0.9, 1));
 
     // shader = Shader::create("./shader/vertex.glsl", "./shader/fragment.glsl");
 
