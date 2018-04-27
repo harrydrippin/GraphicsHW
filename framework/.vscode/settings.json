@@ -22,6 +22,7 @@
         "__tree": "cpp",
         "bitset": "cpp",
         "atomic": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "cstdlib": "cpp"
     }
 }

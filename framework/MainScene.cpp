@@ -1,5 +1,10 @@
 #include "MainScene.h"
 
+#include <ctime>
+#include <cstdlib>
+
+using namespace std;
+
 MainScene * MainScene::create() {
     auto ret = new MainScene();
     
@@ -7,75 +12,87 @@ MainScene * MainScene::create() {
 }
 
 void MainScene::initialized() {
-    Vec2 origin(240, 240);
+    std::srand(std::time(NULL));
 
-    rect = Primitives::create(2);
+    Vec4 origin(320, 320, 0, 1);
 
-    rect->drawSolidRectangle(Vec4(origin.x, origin.y, 0, 1), Vec4(origin.x + 100, origin.y + 100, 0, 1), Color4F(0.1, 0.7, 0.8, 1));
-    rect->drawSolidRectangle(Vec4(20, 20, 0, 1), Vec4(120, 120, 0, 1), Color4F(0.4, 0.3, 0.9, 1));
+    float offset = (640 / 4);
+    float length = (640 / 2);
 
-    // shader = Shader::create("./shader/vertex.glsl", "./shader/fragment.glsl");
+    computeHilbertCurve(6, (length - offset) * 2, offset, origin);
 
-    // shader->addUniform("u_pvm");
-    // shader->addAttrib("a_color");
-    // shader->addAttrib("a_position");
+    rect = Primitives::create();
 
-    // modelMatrix(0, 0) = 1;
-    // modelMatrix(1, 1) = 1;
-    // modelMatrix(2, 2) = 1;
-    // modelMatrix(3, 3) = 1;
+    for (int i = 0; i < vertices.size() - 1; i++) {
+        rect->drawLine(vertices[i], vertices[i + 1], Color4F::RED);
+    }
 
-    // float size = 240;
-    // Vec2 pos = origin;
-
-    // v.push_back(Vec4(pos.x - size / 2, pos.y - size / 2, 0, 1.0f));
-    // v.push_back(Vec4(pos.x + size / 2, pos.y - size / 2, 0, 1.0f));
-    // v.push_back(Vec4(pos.x - size / 2, pos.y + size / 2, 0, 1.0f));
-    // v.push_back(Vec4(pos.x + size / 2, pos.y - size / 2, 0, 1.0f));
-    // v.push_back(Vec4(pos.x + size / 2, pos.y + size / 2, 0, 1.0f));
-    // v.push_back(Vec4(pos.x - size / 2, pos.y + size / 2, 0, 1.0f));
-
-    // for (int i = 0; i < v.size(); i++) c.push_back(Color4F(0.1, 0.7, 0.8, 1.0));
-
-    // size = 200;
-    // pos = origin;
-
-    // v2.push_back(Vec4(pos.x - size / 2, pos.y - size / 2, 0, 1.0f));
-    // v2.push_back(Vec4(pos.x + size / 2, pos.y - size / 2, 0, 1.0f));
-    // v2.push_back(Vec4(pos.x - size / 2, pos.y + size / 2, 0, 1.0f));
-    // v2.push_back(Vec4(pos.x + size / 2, pos.y - size / 2, 0, 1.0f));
-    // v2.push_back(Vec4(pos.x + size / 2, pos.y + size / 2, 0, 1.0f));
-    // v2.push_back(Vec4(pos.x - size / 2, pos.y + size / 2, 0, 1.0f));
-
-    // for (int i = 0; i < v2.size(); i++) c2.push_back(Color4F(0.2, 0.6, 0.9, 1.0));
+    // for (int i = 0; i < 10; i++)
+        // drawRect(Vec4(rand() % 641, rand() % 641, 0, 1), (rand() % 20 + 2) * 20);
 }
 
-void MainScene::update() {
-    // modelMatrix = modelMatrix * translate(-0.001, -0.001, 0);
+void MainScene::drawRect(const Vec4 &pos, float size) {
+    for (int s = 20; s <= size; s += 20) {
+        float r = (rand() % 101) / 100.0f;
+        float g = (rand() % 101) / 100.0f;
+        float b = (rand() % 101) / 100.0f;
+        rect->drawSolidRectangle(Vec4(pos.x - s / 2, pos.y - s / 2, 0, 1),
+                                Vec4(pos.x + s / 2, pos.y + s / 2), Color4F(r, g, b, 1));
+    }
+}
+
+void MainScene::computeHilbertCurve(int iter, float length, float offset, const Vec4 &pos) {
+    string hilb = "a";
+    
+    Vec4 p = pos;
+    
+    for (int i = 0; i < iter; i++) {
+        string tmp = "";
+        
+        for (auto c : hilb) {
+            if (c == 'a') tmp += "-bF+aFa+Fb-";
+            else if (c == 'b') tmp += "+aF-bFb-Fa+";
+            else tmp += c;
+        }
+
+        hilb = tmp;
+        
+        if (i == 0) continue;
+        
+        p = Vec4(p.x - offset, p.y - offset, 0, 1);
+        offset /= 2;
+        length /= 2;
+    }
+    
+    p = Vec4(p.x - offset, p.y - offset, 0, 1);
+    
+    // 0: right, 1: down, 2: left, 3: up
+    int dir = 0;
+    vertices.push_back(p);
+    
+    for (auto c : hilb) {
+        int s = 0;
+        if (c == 'F') {
+            switch(dir) {
+                case 0: vertices.push_back(vertices.back() + Vec4(1 * length, 0, 0, 0)); break;
+                case 1: vertices.push_back(vertices.back() + Vec4(0, -1 * length, 0, 0)); break;
+                case 2: vertices.push_back(vertices.back() + Vec4(-1 * length, 0, 0, 0)); break;
+                case 3: vertices.push_back(vertices.back() + Vec4(0, 1 * length, 0, 0)); break;
+            }
+        } else if (c == '+') {
+            dir += 1;
+            if (dir > 3) dir = 0;
+        } else if (c == '-') {
+            dir -= 1;
+            if (dir < 0) dir = 3;
+        }
+    }
 }
 
 void MainScene::draw() {
+    glEnable(GL_DEPTH_TEST);
     rect->draw();
-    // glEnable(GL_DEPTH_TEST);
-    // drawVertices(v2.data(), v2.size(), c2.data(), c2.size());
-    // drawVertices(v.data(), v.size(), c.data(), c.size());
-    // glDisable(GL_DEPTH_TEST);
-
-    // shader->use();
-
-    // glUniformMatrix4fv(shader->getUniformLocation("u_pvm"), 1, GL_FALSE, modelMatrix);
-
-    // glVertexAttribPointer(shader->getAttribLocation("a_position"), 4, GL_FLOAT, GL_FALSE, 0, v.data());
-    // glVertexAttribPointer(shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, c.data());
-    
-    // shader->enable();
-
-    // glDrawArrays(GL_TRIANGLE_STRIP, 0, v.size());
-
-    // shader->disable();
-
-    // shader->unUse();
-
+    glDisable(GL_DEPTH_TEST);
 }
 
 void MainScene::released() {

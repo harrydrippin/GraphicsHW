@@ -28,7 +28,7 @@ bool Application::initialize(const std::string &title, int width, int height, in
     glOrtho(0, width, 0, height, -1, 1);
     // glOrtho(-1, 1, -1, 1, -1, 1);
 
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(Application::display);
     glutIdleFunc(Application::idle);

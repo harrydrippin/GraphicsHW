@@ -7,18 +7,16 @@ public:
     static MainScene * create();
 
     void initialized();
-    void update();
     void draw();
     void released();
 
+    void drawRect(const Vec4 &pos, float size);
+
+    void computeHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
+
 private:
-    // std::vector<Vec4> v, v2;
-    // std::vector<Color4F> c, c2;
-
-    // Mat4 modelMatrix;
-
-    // Shader * shader;
-
     Primitives * rect;
+
+    std::vector<Vec4> vertices;
 
 };
