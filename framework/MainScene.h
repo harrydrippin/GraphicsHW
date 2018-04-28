@@ -10,9 +10,13 @@ public:
     void draw();
     void released();
 
-    void drawRect(const Vec4 &pos, float size);
+    void makeRects(float size, int period, int count);
+
+    void drawRect(const Vec4 &pos, float size, int n);
 
     void computeHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
+
+    int random(int min, int max);
 
 private:
     Primitives * rect;

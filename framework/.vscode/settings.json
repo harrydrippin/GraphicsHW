@@ -23,6 +23,9 @@
         "bitset": "cpp",
         "atomic": "cpp",
         "system_error": "cpp",
-        "cstdlib": "cpp"
+        "cstdlib": "cpp",
+        "chrono": "cpp",
+        "limits": "cpp",
+        "ratio": "cpp"
     }
 }
