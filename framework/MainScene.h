@@ -12,15 +12,15 @@ public:
 
     void makeRects(float size, int period, int count);
 
-    void drawRect(const Vec4 &pos, float size, int n);
+    void drawRect(const Vec4 &pos, float size, int n, float z);
 
-    void computeHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
+    std::vector<Vec4> getHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
 
     int random(int min, int max);
 
 private:
     Primitives * rect;
 
-    std::vector<Vec4> vertices;
+    std::vector<Color4F> preColors;
 
 };

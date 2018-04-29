@@ -14,18 +14,36 @@ MainScene * MainScene::create() {
 void MainScene::initialized() {
     std::srand(std::time(NULL));
 
-    Vec4 origin(320, 320, 0, 1);
+    preColors.push_back(Color4F(0.282, 0.552, 0.788, 1));
+    preColors.push_back(Color4F(0.494, 0.768, 0.474, 1));
+    preColors.push_back(Color4F(0.262, 0.717, 0.478, 1));
+    preColors.push_back(Color4F(0.678, 0.823, 0.470, 1));
+    preColors.push_back(Color4F(1.000, 0.964, 0.619, 1));
+    preColors.push_back(Color4F(0.027, 0.294, 0.494, 1));
+    preColors.push_back(Color4F(0.168, 0.733, 0.701, 1));
+    preColors.push_back(Color4F(0.933, 0.937, 0.600, 1));
+    preColors.push_back(Color4F(0.514, 0.784, 0.518, 1));
+    preColors.push_back(Color4F(0.259, 0.745, 0.643, 1));
+    preColors.push_back(Color4F(0.173, 0.427, 0.506, 1));
+    preColors.push_back(Color4F(0.247, 0.596, 0.765, 1));
+    preColors.push_back(Color4F(0.212, 0.733, 0.647, 1));
 
-    float offset = (640 / 4);
-    float length = (640 / 2);
+    Vec4 origin(240, 240, 0, 1);
 
-    computeHilbertCurve(5, (length - offset) * 2, offset, origin);
+    float offset = (480 / 4);
+    float length = (480 / 2);
+
+    auto v1 = getHilbertCurve(1, (length - offset) * 2, offset, origin);
+    auto v2 = getHilbertCurve(2, (length - offset) * 2, offset, origin);
+    auto v3 = getHilbertCurve(3, (length - offset) * 2, offset, origin);
+    auto v4 = getHilbertCurve(4, (length - offset) * 2, offset, origin);
+    auto v5 = getHilbertCurve(5, (length - offset) * 2, offset, origin);
 
     rect = Primitives::create();
 
     // draw hilbert curve
-    // for (int i = 0; i < vertices.size() - 1; i++) {
-    //     rect->drawLine(vertices[i], vertices[i + 1], Color4F::RED);
+    // for (int i = 0; i < v1.size() - 1; i++) {
+    //     rect->drawLine(v1[i], v1[i + 1], Color4F::RED);
     // }
 
     // // very small rect size(40, 40) - count(80, 120)
@@ -44,10 +62,20 @@ void MainScene::initialized() {
     // for (int i = 0; i < random(5, 10); i++)
     //     drawRect(Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1), random(320, 400), random(15, 30));
 
-    makeRects(20, random(5, 10), random(80, 120));
-    makeRects(40, random(10, 15), random(40, 60));
-    makeRects(random(80, 120), random(30, 40), random(15, 25));
-    makeRects(random(240, 400), random(30, 40), random(5, 10));
+    // makeRects(20, random(5, 10), random(50, 100));
+    // makeRects(40, random(10, 15), random(40, 60));
+    // makeRects(random(80, 120), random(30, 40), random(15, 25));
+    // makeRects(random(240, 360), random(30, 40), random(5, 10));
+
+    // for (auto i : v5) {
+    //     if (random(0, 100) > 80)
+    //         drawRect(i, random(20, 20), random(10, 20));
+    // }
+    // for (auto i : v4) drawRect(i, random(20, 30), random(10, 20));
+    // for (auto i : v3) drawRect(i, random(30, 50), random(10, 20));
+    for (auto i : v1) drawRect(i, random(120, 240), random(20, 40), 0);
+    for (auto i : v2) drawRect(i, random(60, 90), random(20, 40), 0.1);
+
 
     GLint offsetMenu = glutCreateMenu(0);
     glutAddMenuEntry("7", 1);
@@ -74,34 +102,37 @@ void MainScene::initialized() {
 void MainScene::makeRects(float size, int period, int count) {
     std::vector<Vec4> pos;
 
-    for (;pos.size() < count ;) {
-        auto v = Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1);
+    // for (;pos.size() < count ;) {
+    //     auto v = Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1);
 
-        bool escape = false;
-        for (int i = 0; i < pos.size(); i++) {
-            if (v.x == pos[i].x && v.y == pos[i].y) {
-                escape = true; break;
-            }
-        }
-        if (escape) continue;
-        pos.push_back(v);
-    }
-    for (auto v : pos)
-        drawRect(v, size, period);
+    //     bool escape = false;
+    //     for (int i = 0; i < pos.size(); i++) {
+    //         if (v.x == pos[i].x && v.y == pos[i].y) {
+    //             escape = true; break;
+    //         }
+    //     }
+    //     if (escape) continue;
+    //     pos.push_back(v);
+    // }
+    // for (auto v : pos)
+    //     drawRect(v, size, period);
 }
 
-void MainScene::drawRect(const Vec4 &pos, float size, int n) {
+void MainScene::drawRect(const Vec4 &pos, float size, int n, float z) {
     n = size / n;
     for (int s = n; s <= size; s += n) {
-        float r = (rand() % 101) / 100.0f;
-        float g = (rand() % 101) / 100.0f;
-        float b = (rand() % 101) / 100.0f;
-        rect->drawSolidRectangle(Vec4(pos.x - s / 2, pos.y - s / 2, 0, 1),
-                                Vec4(pos.x + s / 2, pos.y + s / 2), Color4F(r, g, b, 1));
+        // float r = random(0, 100) / 100.0f;
+        // float g = random(90, 100) / 100.0f;
+        // float b = random(0, 100) / 100.0f;
+        Color4F c = preColors[random(0, preColors.size() - 1)];
+        rect->drawSolidRectangle(Vec4(pos.x - s / 2, pos.y - s / 2, z, 1),
+                                Vec4(pos.x + s / 2, pos.y + s / 2, 0, 1), c);
     }
 }
 
-void MainScene::computeHilbertCurve(int iter, float length, float offset, const Vec4 &pos) {
+std::vector<Vec4> MainScene::getHilbertCurve(int iter, float length, float offset, const Vec4 &pos) {
+    std::vector<Vec4> ret;
+
     string hilb = "a";
     
     Vec4 p = pos;
@@ -128,16 +159,16 @@ void MainScene::computeHilbertCurve(int iter, float length, float offset, const 
     
     // 0: right, 1: down, 2: left, 3: up
     int dir = 0;
-    vertices.push_back(p);
+    ret.push_back(p);
     
     for (auto c : hilb) {
         int s = 0;
         if (c == 'F') {
             switch(dir) {
-                case 0: vertices.push_back(vertices.back() + Vec4(1 * length, 0, 0, 0)); break;
-                case 1: vertices.push_back(vertices.back() + Vec4(0, -1 * length, 0, 0)); break;
-                case 2: vertices.push_back(vertices.back() + Vec4(-1 * length, 0, 0, 0)); break;
-                case 3: vertices.push_back(vertices.back() + Vec4(0, 1 * length, 0, 0)); break;
+                case 0: ret.push_back(ret.back() + Vec4(1 * length, 0, 0, 0)); break;
+                case 1: ret.push_back(ret.back() + Vec4(0, -1 * length, 0, 0)); break;
+                case 2: ret.push_back(ret.back() + Vec4(-1 * length, 0, 0, 0)); break;
+                case 3: ret.push_back(ret.back() + Vec4(0, 1 * length, 0, 0)); break;
             }
         } else if (c == '+') {
             dir += 1;
@@ -147,6 +178,8 @@ void MainScene::computeHilbertCurve(int iter, float length, float offset, const 
             if (dir < 0) dir = 3;
         }
     }
+
+    return ret;
 }
 
 int MainScene::random(int min, int max) {

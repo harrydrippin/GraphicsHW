@@ -20,7 +20,8 @@ bool Application::initialize(const std::string &title, int width, int height, in
         return false;
     }
 
-    glClearColor(0.8, 0.8, 0.8, 1);
+    // glClearColor(0.8, 0.8, 0.8, 1);
+    glClearColor(1, 1, 1, 1);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -392,13 +393,13 @@ void Primitives::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color
 }
 
 void Primitives::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
-    _polygonVertices.push_back(Vec4(origin.x, origin.y, 0, 1));
-    _polygonVertices.push_back(Vec4(dest.x, origin.y, 0, 1));
-    _polygonVertices.push_back(Vec4(origin.x, dest.y, 0, 1));
+    _polygonVertices.push_back(Vec4(origin.x, origin.y, origin.z, 1));
+    _polygonVertices.push_back(Vec4(dest.x, origin.y, origin.z, 1));
+    _polygonVertices.push_back(Vec4(origin.x, dest.y, origin.z, 1));
 
-    _polygonVertices.push_back(Vec4(dest.x, origin.y, 0, 1));
-    _polygonVertices.push_back(Vec4(dest.x, dest.y, 0, 1));
-    _polygonVertices.push_back(Vec4(origin.x, dest.y, 0, 1));
+    _polygonVertices.push_back(Vec4(dest.x, origin.y, origin.z, 1));
+    _polygonVertices.push_back(Vec4(dest.x, dest.y, origin.z, 1));
+    _polygonVertices.push_back(Vec4(origin.x, dest.y, origin.z, 1));
 
     for (int i = 0; i < 6; i++) _polygonColors.push_back(color);
 }
