@@ -43,6 +43,8 @@ public:
 
     void setScene(Scene * scene);
 
+    Scene * getCurrentScene();
+
 private:
     Director() {}
     ~Director();

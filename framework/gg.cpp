@@ -92,6 +92,10 @@ void Director::loop() {
     _currentScene->update();
 }
 
+Scene * Director::getCurrentScene() {
+    return _currentScene;
+}
+
 #pragma endregion
 
 #pragma region Scene

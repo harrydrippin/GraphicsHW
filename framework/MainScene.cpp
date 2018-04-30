@@ -33,97 +33,63 @@ void MainScene::initialized() {
     float offset = (480 / 4);
     float length = (480 / 2);
 
-    auto v1 = getHilbertCurve(1, (length - offset) * 2, offset, origin);
-    auto v2 = getHilbertCurve(2, (length - offset) * 2, offset, origin);
-    auto v3 = getHilbertCurve(3, (length - offset) * 2, offset, origin);
-    auto v4 = getHilbertCurve(4, (length - offset) * 2, offset, origin);
-    auto v5 = getHilbertCurve(5, (length - offset) * 2, offset, origin);
+    vertices = getHilbertCurve(5, (length - offset) * 2, offset, origin);
 
     rect = Primitives::create();
 
-    // draw hilbert curve
-    // for (int i = 0; i < v1.size() - 1; i++) {
-    //     rect->drawLine(v1[i], v1[i + 1], Color4F::RED);
-    // }
+    drawScreen();
 
-    // // very small rect size(40, 40) - count(80, 120)
-    // for (int i = 0; i < random(80, 120); i++)
-    //     drawRect(Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1), random(40, 40), random(5, 15));
-
-    // // small rect size(40, 120) - count(20, 45)
-    // // for (int i = 0; i < random(20, 40); i++)
-    //     // drawRect(Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1), random(40, 120), random(15, 30));
-
-    // // normal rect size(120, 320) - count(10, 20)
-    // for (int i = 0; i < random(10, 20); i++)
-    //     drawRect(Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1), random(120, 320), random(15, 30));
-
-    // // big rect size(320, 400) - count(5, 10)
-    // for (int i = 0; i < random(5, 10); i++)
-    //     drawRect(Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1), random(320, 400), random(15, 30));
-
-    // makeRects(20, random(5, 10), random(50, 100));
-    // makeRects(40, random(10, 15), random(40, 60));
-    // makeRects(random(80, 120), random(30, 40), random(15, 25));
-    // makeRects(random(240, 360), random(30, 40), random(5, 10));
-
-    // for (auto i : v5) {
-    //     if (random(0, 100) > 80)
-    //         drawRect(i, random(20, 20), random(10, 20));
-    // }
-    // for (auto i : v4) drawRect(i, random(20, 30), random(10, 20));
-    // for (auto i : v3) drawRect(i, random(30, 50), random(10, 20));
-    for (auto i : v1) drawRect(i, random(120, 240), random(20, 40), 0);
-    for (auto i : v2) drawRect(i, random(60, 90), random(20, 40), 0.1);
-
-
-    GLint offsetMenu = glutCreateMenu(0);
+    GLint offsetMenu = glutCreateMenu(MainScene::menuCallback);
     glutAddMenuEntry("7", 1);
     glutAddMenuEntry("5", 2);
     glutAddMenuEntry("3", 3);
 
-    GLint minMaxNumberMenu = glutCreateMenu(0);
+    GLint minMaxNumberMenu = glutCreateMenu(MainScene::menuCallback);
     glutAddMenuEntry("5/10", 4);
     glutAddMenuEntry("10/15", 5);
     glutAddMenuEntry("80/120", 6);
 
-    GLint groupRatioMenu = glutCreateMenu(0);
-    glutAddMenuEntry("1", 4);
-    glutAddMenuEntry("2", 5);
-    glutAddMenuEntry("3", 6);
+    GLint groupRatioMenu = glutCreateMenu(MainScene::menuCallback);
+    glutAddMenuEntry("1", 7);
+    glutAddMenuEntry("2", 8);
+    glutAddMenuEntry("3", 9);
 
-    glutCreateMenu(0);
+    glutCreateMenu(MainScene::menuCallback);
     glutAddSubMenu("offset", offsetMenu);
     glutAddSubMenu("square min/max number", minMaxNumberMenu);
     glutAddSubMenu("square group ratio", groupRatioMenu);
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
-void MainScene::makeRects(float size, int period, int count) {
+void MainScene::drawScreen() {
+    rect->clear();
+    for (auto v : vertices) {
+        drawRect(v, random(0, 40), random(5, 10), 0);
+    }
+}
+
+void MainScene::makeRects(const std::vector<Vec4> &vertices, float size, int period, int count) {
     std::vector<Vec4> pos;
 
-    // for (;pos.size() < count ;) {
-    //     auto v = Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1);
+    for (;pos.size() < count ;) {
+        auto v = Vec4(vertices[random(0, vertices.size() - 1)].x, vertices[random(0, vertices.size() - 1)].y, 0, 1);
 
-    //     bool escape = false;
-    //     for (int i = 0; i < pos.size(); i++) {
-    //         if (v.x == pos[i].x && v.y == pos[i].y) {
-    //             escape = true; break;
-    //         }
-    //     }
-    //     if (escape) continue;
-    //     pos.push_back(v);
-    // }
-    // for (auto v : pos)
-    //     drawRect(v, size, period);
+        bool escape = false;
+        for (int i = 0; i < pos.size(); i++) {
+            if (v.x == pos[i].x && v.y == pos[i].y) {
+                escape = true; break;
+            }
+        }
+        if (escape) continue;
+        pos.push_back(v);
+    }
+    for (auto v : pos) drawRect(v, size, period, 0);
 }
 
 void MainScene::drawRect(const Vec4 &pos, float size, int n, float z) {
     n = size / n;
+    n = n > 0 ? n : 1;
     for (int s = n; s <= size; s += n) {
-        // float r = random(0, 100) / 100.0f;
-        // float g = random(90, 100) / 100.0f;
-        // float b = random(0, 100) / 100.0f;
         Color4F c = preColors[random(0, preColors.size() - 1)];
         rect->drawSolidRectangle(Vec4(pos.x - s / 2, pos.y - s / 2, z, 1),
                                 Vec4(pos.x + s / 2, pos.y + s / 2, 0, 1), c);
@@ -194,4 +160,38 @@ void MainScene::draw() {
 
 void MainScene::released() {
     rect->release();
+}
+
+void MainScene::menuCallback(int value) {
+    auto scene = ((MainScene*)Director::getInstance()->getCurrentScene());
+    switch(value) {
+    case 1: // offset 7
+
+        break;
+    case 2: // offset 5
+
+        break;
+    case 3: // offset 3
+
+        break;
+    case 4: // sq min/max
+
+        break;
+    case 5: // sq min/max
+
+        break;
+    case 6: // sq min/max
+
+        break;
+    case 7: // sq group ratio
+
+        break;
+    case 8: // sq group ratio
+
+        break;
+    case 9: // sq group ratio
+
+        break;
+    }
+    scene->drawScreen();
 }

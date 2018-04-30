@@ -10,7 +10,9 @@ public:
     void draw();
     void released();
 
-    void makeRects(float size, int period, int count);
+    void drawScreen();
+
+    void makeRects(const std::vector<Vec4> &vertices, float size, int period, int count);
 
     void drawRect(const Vec4 &pos, float size, int n, float z);
 
@@ -18,9 +20,12 @@ public:
 
     int random(int min, int max);
 
+    static void menuCallback(int value);
+
 private:
     Primitives * rect;
 
+    std::vector<Vec4> vertices;
     std::vector<Color4F> preColors;
 
 };
