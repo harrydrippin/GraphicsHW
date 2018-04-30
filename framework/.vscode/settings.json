@@ -28,6 +28,7 @@
         "limits": "cpp",
         "ratio": "cpp",
         "__locale": "cpp",
-        "__string": "cpp"
+        "__string": "cpp",
+        "random": "cpp"
     }
 }

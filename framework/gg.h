@@ -8,6 +8,7 @@
 #include <string>
 #include <cmath>
 #include <map>
+#include <random>
 
 #pragma region Application
 
@@ -462,13 +463,13 @@ protected:
 
 #pragma endregion
 
-#pragma region Primitives
+#pragma region Primitive2D
 
-class Primitives {
+class Primitive2D {
 public:
-    Primitives(float width);
+    Primitive2D(float width);
 
-    static Primitives * create(float width = 1.0f);
+    static Primitive2D * create(float width = 1.0f);
 
     void drawPoint(const Vec4 &pos, float size, const Color4F &color);
     void drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color);
@@ -494,6 +495,24 @@ protected:
 };
 
 #pragma endregion
+
+#pragma region Random 
+
+class Random {
+public:
+    static int random(int min, int max);
+    static int randomWithSeed(int seed, int min, int max);
+
+private:
+
+
+};
+
+#define random(min, max) Random::random(min, max)
+#define randomWithSeed(seed, min, max) Random::randomWithSeed(seed, min, max)
+
+#pragma endregion
+
 
 void drawVertices(Vec4 *vertices, int vertexSize, Color4F *colors, int colorSize);
 

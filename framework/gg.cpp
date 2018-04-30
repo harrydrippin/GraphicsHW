@@ -361,27 +361,27 @@ void Shader::release() {
 
 #pragma endregion
 
-#pragma region Primitives
+#pragma region Primitive2D
 
-Primitives::Primitives(float width) : _width(width) {
+Primitive2D::Primitive2D(float width) : _width(width) {
 }
 
-Primitives * Primitives::create(float width) {
-    auto ret = new Primitives(width);
+Primitive2D * Primitive2D::create(float width) {
+    auto ret = new Primitive2D(width);
     ret->init();
 
     return ret;
 }
 
-bool Primitives::init() {
+bool Primitive2D::init() {
 
 }
 
-void Primitives::drawPoint(const Vec4 &pos, float size, const Color4F &color) {
+void Primitive2D::drawPoint(const Vec4 &pos, float size, const Color4F &color) {
 
 }
 
-void Primitives::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) {
+void Primitive2D::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) {
     _lineVertices.push_back(p1);
     _lineVertices.push_back(p2);
 
@@ -389,14 +389,14 @@ void Primitives::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) 
     _lineColors.push_back(color);
 }
 
-void Primitives::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
+void Primitive2D::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
     drawLine(Vec4(origin.x, origin.y, 0, 1), Vec4(dest.x, origin.y, 0, 1), color);
     drawLine(Vec4(dest.x, origin.y, 0, 1), Vec4(dest.x, dest.y, 0, 1), color);
     drawLine(Vec4(dest.x, dest.y, 0, 1), Vec4(origin.x, dest.y, 0, 1), color);
     drawLine(Vec4(origin.x, dest.y, 0, 1), Vec4(origin.x, origin.y, 0, 1), color);
 }
 
-void Primitives::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
+void Primitive2D::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
     _polygonVertices.push_back(Vec4(origin.x, origin.y, origin.z, 1));
     _polygonVertices.push_back(Vec4(dest.x, origin.y, origin.z, 1));
     _polygonVertices.push_back(Vec4(origin.x, dest.y, origin.z, 1));
@@ -408,7 +408,7 @@ void Primitives::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const 
     for (int i = 0; i < 6; i++) _polygonColors.push_back(color);
 }
 
-void Primitives::draw() {
+void Primitive2D::draw() {
     // draw line
     glEnableClientState(GL_COLOR_ARRAY);
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -435,7 +435,7 @@ void Primitives::draw() {
     glDisableClientState(GL_COLOR_ARRAY);
 }
 
-void Primitives::clear() {
+void Primitive2D::clear() {
     _lineVertices.clear();
     _lineColors.clear();
 
@@ -443,10 +443,31 @@ void Primitives::clear() {
     _polygonColors.clear();
 }
 
-void Primitives::release() {
+void Primitive2D::release() {
     this->clear();
 
     delete this;
+}
+
+#pragma endregion
+
+#pragma region Random
+
+int Random::random(int min, int max) {
+    random_device rd;
+    mt19937_64 rnd(rd());
+
+    uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
+}
+
+int Random::randomWithSeed(int seed, int min, int max) {
+    mt19937_64 rnd(seed);
+
+    uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
 }
 
 #pragma endregion

@@ -4,6 +4,8 @@
 
 class MainScene : public Scene {
 public:
+    int smallSquareCount, mediumSquareCount, bigSquareCount;
+
     static MainScene * create();
 
     void initialized();
@@ -14,18 +16,15 @@ public:
 
     void makeRects(const std::vector<Vec4> &vertices, float size, int period, int count);
 
-    void drawRect(const Vec4 &pos, float size, int n, float z);
+    void drawRect(const Vec4 &pos, float size, int n);
 
     std::vector<Vec4> getHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
-
-    int random(int min, int max);
 
     static void menuCallback(int value);
 
 private:
-    Primitives * rect;
+    Primitive2D * rect;
 
     std::vector<Vec4> vertices;
     std::vector<Color4F> preColors;
-
 };
