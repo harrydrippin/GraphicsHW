@@ -14,17 +14,17 @@ public:
 
     void drawScreen();
 
-    void makeRects(const std::vector<Vec4> &vertices, float size, int period, int count);
+    void makeRects(const std::vector<Vec3> &vertices, float size, int period, int count);
 
-    void drawRect(const Vec4 &pos, float size, int n);
+    void drawRect(const Vec3 &pos, float size, int n);
 
-    std::vector<Vec4> getHilbertCurve(int iter, float length, float offset, const Vec4 &pos);
+    std::vector<Vec3> getHilbertCurve(int iter, float length, float offset, const Vec3 &pos);
 
     static void menuCallback(int value);
 
 private:
     Primitive2D * rect;
 
-    std::vector<Vec4> vertices;
+    std::vector<Vec3> vertices;
     std::vector<Color4F> preColors;
 };

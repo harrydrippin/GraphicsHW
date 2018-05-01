@@ -23,11 +23,12 @@ bool Application::initialize(const std::string &title, int width, int height, in
     // glClearColor(0.8, 0.8, 0.8, 1);
     glClearColor(1, 1, 1, 1);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+    // glMatrixMode(GL_PROJECTION);
+    // glLoadIdentity();
 
-    glOrtho(0, width, 0, height, -1, 1);
+    // glOrtho(0, width, 0, height, -1, 1);
     // glOrtho(-1, 1, -1, 1, -1, 1);
+    Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
 
     // glEnable(GL_DEPTH_TEST);
 
@@ -94,6 +95,14 @@ void Director::loop() {
 
 Scene * Director::getCurrentScene() {
     return _currentScene;
+}
+
+void Director::setProjectionMatrix(const Mat4 &projection) {
+    _projectionMatrix = projection;
+}
+
+Mat4 Director::getProjectionMatrix() {
+    return _projectionMatrix;
 }
 
 #pragma endregion
@@ -374,14 +383,20 @@ Primitive2D * Primitive2D::create(float width) {
 }
 
 bool Primitive2D::init() {
+    _shader = Shader::create("./shader/vertex.glsl", "./shader/fragment.glsl");
+
+    _shader->addUniform("u_pvm");
+    _shader->addAttrib("a_position");
+    _shader->addAttrib("a_color");
+
+    _modelViewMatrix.setIdentity();
+}
+
+void Primitive2D::drawPoint(const Vec3 &pos, float size, const Color4F &color) {
 
 }
 
-void Primitive2D::drawPoint(const Vec4 &pos, float size, const Color4F &color) {
-
-}
-
-void Primitive2D::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color) {
+void Primitive2D::drawLine(const Vec3 &p1, const Vec3 &p2, const Color4F &color) {
     _lineVertices.push_back(p1);
     _lineVertices.push_back(p2);
 
@@ -389,50 +404,58 @@ void Primitive2D::drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color)
     _lineColors.push_back(color);
 }
 
-void Primitive2D::drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
-    drawLine(Vec4(origin.x, origin.y, 0, 1), Vec4(dest.x, origin.y, 0, 1), color);
-    drawLine(Vec4(dest.x, origin.y, 0, 1), Vec4(dest.x, dest.y, 0, 1), color);
-    drawLine(Vec4(dest.x, dest.y, 0, 1), Vec4(origin.x, dest.y, 0, 1), color);
-    drawLine(Vec4(origin.x, dest.y, 0, 1), Vec4(origin.x, origin.y, 0, 1), color);
+void Primitive2D::drawRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color) {
+    drawLine(Vec3(origin.x, origin.y, 0), Vec3(dest.x, origin.y, 0), color);
+    drawLine(Vec3(dest.x, origin.y, 0), Vec3(dest.x, dest.y, 0), color);
+    drawLine(Vec3(dest.x, dest.y, 0), Vec3(origin.x, dest.y, 0), color);
+    drawLine(Vec3(origin.x, dest.y, 0), Vec3(origin.x, origin.y, 0), color);
 }
 
-void Primitive2D::drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color) {
-    _polygonVertices.push_back(Vec4(origin.x, origin.y, origin.z, 1));
-    _polygonVertices.push_back(Vec4(dest.x, origin.y, origin.z, 1));
-    _polygonVertices.push_back(Vec4(origin.x, dest.y, origin.z, 1));
+void Primitive2D::drawSolidRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color) {
+    _polygonVertices.push_back(Vec3(origin.x, origin.y, origin.z));
+    _polygonVertices.push_back(Vec3(dest.x, origin.y, origin.z));
+    _polygonVertices.push_back(Vec3(origin.x, dest.y, origin.z));
 
-    _polygonVertices.push_back(Vec4(dest.x, origin.y, origin.z, 1));
-    _polygonVertices.push_back(Vec4(dest.x, dest.y, origin.z, 1));
-    _polygonVertices.push_back(Vec4(origin.x, dest.y, origin.z, 1));
+    _polygonVertices.push_back(Vec3(dest.x, origin.y, origin.z));
+    _polygonVertices.push_back(Vec3(dest.x, dest.y, origin.z));
+    _polygonVertices.push_back(Vec3(origin.x, dest.y, origin.z));
 
     for (int i = 0; i < 6; i++) _polygonColors.push_back(color);
 }
 
 void Primitive2D::draw() {
-    // draw line
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
+    //draw line
+    _shader->use();
 
-    glColorPointer(4, GL_FLOAT, 0, _lineColors.data());
-    glVertexPointer(4, GL_FLOAT, 0, _lineVertices.data());
+    auto mvp = _modelViewMatrix * Director::getInstance()->getProjectionMatrix();
 
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
+
+    glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _lineVertices.data());
+    glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _lineColors.data());
+
+    _shader->enable();
     glLineWidth(_width);
     glDrawArrays(GL_LINES, 0, _lineVertices.size());
-    
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    _shader->disable();
 
-    // draw polygon
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
+    _shader->unUse();
 
-    glColorPointer(4, GL_FLOAT, 0, _polygonColors.data());
-    glVertexPointer(4, GL_FLOAT, 0, _polygonVertices.data());
+    //draw polygon
+    _shader->use();
 
+    mvp = _modelViewMatrix * Director::getInstance()->getProjectionMatrix();
+
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
+
+    glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _polygonVertices.data());
+    glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _polygonColors.data());
+
+    _shader->enable();
     glDrawArrays(GL_TRIANGLES, 0, _polygonVertices.size());
-    
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    _shader->disable();
+
+    _shader->unUse();
 }
 
 void Primitive2D::clear() {
@@ -445,6 +468,8 @@ void Primitive2D::clear() {
 
 void Primitive2D::release() {
     this->clear();
+
+    _shader->release();
 
     delete this;
 }
@@ -471,13 +496,3 @@ int Random::randomWithSeed(int seed, int min, int max) {
 }
 
 #pragma endregion
-
-void drawVertices(Vec4 *vertices, int vertexSize, Color4F *colors, int colorSize) {
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glColorPointer(4, GL_FLOAT, 0, colors);
-    glVertexPointer(4, GL_FLOAT, 0, vertices);
-    glDrawArrays(GL_TRIANGLES, 0, vertexSize);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}

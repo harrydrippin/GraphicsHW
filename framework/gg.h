@@ -10,71 +10,6 @@
 #include <map>
 #include <random>
 
-#pragma region Application
-
-class Scene;
-
-class Application {
-public:
-    bool initialize(const std::string &title, int width, int height, int * argc, char ** argv);
-
-    int run(Scene * scene);
-
-private:
-    static void display();
-    static void idle();
-
-};
-
-#pragma endregion
-
-#pragma region Director
-
-class Scene;
-
-class Director {
-public:
-    static Director * getInstance();
-
-    // current scene's display
-    void display();
-
-    // current scene's loop
-    void loop();
-
-    void setScene(Scene * scene);
-
-    Scene * getCurrentScene();
-
-private:
-    Director() {}
-    ~Director();
-
-private:
-    static Director _instance;
-
-    Scene * _currentScene;
-    // std::vector<Scene *> _scenes;
-
-};
-
-#pragma endregion
-
-#pragma region Scene
-
-class Scene {
-public:
-    virtual void initialized() = 0;
-    virtual void released() {};
-    virtual void update() {};
-    virtual void draw() {};
-
-    void release();
-
-};
-
-#pragma endregion
-
 #pragma region Vector
 
 template<unsigned int N>
@@ -290,6 +225,76 @@ typedef Matrix<4, 4> Mat4;
 
 #pragma endregion
 
+#pragma region Application
+
+class Scene;
+
+class Application {
+public:
+    bool initialize(const std::string &title, int width, int height, int * argc, char ** argv);
+
+    int run(Scene * scene);
+
+private:
+    static void display();
+    static void idle();
+
+};
+
+#pragma endregion
+
+#pragma region Director
+
+class Scene;
+
+class Director {
+public:
+    static Director * getInstance();
+
+    // current scene's display
+    void display();
+
+    // current scene's loop
+    void loop();
+
+    void setScene(Scene * scene);
+
+    Scene * getCurrentScene();
+
+    void setProjectionMatrix(const Mat4 &projection);
+    Mat4 getProjectionMatrix();
+
+private:
+    Director() {}
+    ~Director();
+
+private:
+    static Director _instance;
+
+    Scene * _currentScene;
+    // std::vector<Scene *> _scenes;
+
+    Mat4 _projectionMatrix;
+
+};
+
+#pragma endregion
+
+#pragma region Scene
+
+class Scene {
+public:
+    virtual void initialized() = 0;
+    virtual void released() {};
+    virtual void update() {};
+    virtual void draw() {};
+
+    void release();
+
+};
+
+#pragma endregion
+
 #pragma region Color
 
 // class Color3F {
@@ -471,11 +476,11 @@ public:
 
     static Primitive2D * create(float width = 1.0f);
 
-    void drawPoint(const Vec4 &pos, float size, const Color4F &color);
-    void drawLine(const Vec4 &p1, const Vec4 &p2, const Color4F &color);
-    void drawRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color);
+    void drawPoint(const Vec3 &pos, float size, const Color4F &color);
+    void drawLine(const Vec3 &p1, const Vec3 &p2, const Color4F &color);
+    void drawRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color);
 
-    void drawSolidRectangle(const Vec4 &origin, const Vec4 &dest, const Color4F &color);
+    void drawSolidRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color);
 
     void draw();
 
@@ -489,8 +494,12 @@ protected:
 protected:
     float _width;
 
-    std::vector<Vec4> _lineVertices, _polygonVertices;
+    std::vector<Vec3> _lineVertices, _polygonVertices;
     std::vector<Color4F> _lineColors, _polygonColors;
+
+    Shader * _shader;
+
+    Mat4 _modelViewMatrix;
 
 };
 
@@ -505,15 +514,11 @@ public:
 
 private:
 
-
 };
 
 #define random(min, max) Random::random(min, max)
 #define randomWithSeed(seed, min, max) Random::randomWithSeed(seed, min, max)
 
 #pragma endregion
-
-
-void drawVertices(Vec4 *vertices, int vertexSize, Color4F *colors, int colorSize);
 
 #endif

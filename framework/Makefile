@@ -17,6 +17,7 @@
 SOURCES = main.cpp gg.cpp MainScene.cpp
 CC = g++
 CFLAGS = -std=c++11 -framework OpenGL -lglut -lGLEW
+# CFLAGS = -std=c++11 -lGL -lglut -lGLEW
 EXECUTABLE = a
 RM = rm -rf
 
