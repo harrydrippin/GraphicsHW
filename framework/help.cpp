@@ -164,6 +164,10 @@ Mat4 Camera::getView() {
                   _upDirection.x, _upDirection.y, _upDirection.z);
 }
 
+Mat4 Camera::getProjection() {
+    return perspective(_fovy, 1.0f, 0.001f, 10000.0f);
+}
+
 void Camera::moveForward(float delta) {
     _position.x += _frontDirection.x * delta;
     _position.z += _frontDirection.z * delta;
@@ -202,17 +206,33 @@ void Camera::rotateRight(float delta) {
     _rightDirection = _frontDirection.cross(_upDirection);
 }
 
+void Camera::setFovy(float fovy) {
+    _fovy = fovy;
+}
+
+float Camera::getFovy() const {
+    return _fovy;
+}
+
 #pragma endregion
 
 #pragma region Node
 
 void Node::setPosition(const Vec3 &pos) {
-    _modelMatrix = translate(pos.x, pos.y, pos.z);
+    _modelMatrix = _modelMatrix * translate(pos.x, pos.y, pos.z);
 }
 
-Vec3 Node::getPosition() {
-    return Vec3();
+void Node::setRotation(float angle, const Vec3 &rot) {
+    _modelMatrix = _modelMatrix * rotate(angle, rot.x, rot.y, rot.z);
 }
+
+void Node::setScale(const Vec3 &s) {
+    _modelMatrix = _modelMatrix * scale(s.x, s.y, s.z);
+}
+
+// Vec3 Node::getPosition() {
+//     return Vec3();
+// }
 
 #pragma endregion
 
@@ -693,7 +713,7 @@ bool Obj3D::init(const std::string& filename) {
 void Obj3D::onDraw() {
     _shader->use();
 
-    auto mvp = perspective(45, 1.0f, 0.001f, 10000.0f) * Camera::get()->getView()/*lookAt(0, 2, 0, 0, 2, -1, 0, 1, 0)*/ * _modelMatrix;
+    auto mvp = Camera::get()->getProjection() * Camera::get()->getView() * _modelMatrix;
 
     glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
 	glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, false, 0, &_vertices[0]);
@@ -703,6 +723,12 @@ void Obj3D::onDraw() {
     _shader->disable();
 
     _shader->unUse();
+}
+
+void Obj3D::release() {
+    _vertices.clear();
+    _shader->release();
+    Object::release();
 }
 
 #pragma endregion

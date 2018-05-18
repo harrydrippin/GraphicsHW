@@ -454,7 +454,9 @@ public:
 
 public:
     void setPosition(const Vec3 &pos);
-    Vec3 getPosition();
+    void setRotation(float angle, const Vec3 &rot);
+    void setScale(const Vec3 &s);
+    // Vec3 getPosition();
 
 };
 
@@ -488,6 +490,7 @@ public:
     static Camera * get();
 
     Mat4 getView(); 
+    Mat4 getProjection();
 
     void moveForward(float delta);
     void moveBackward(float delta);
@@ -496,6 +499,9 @@ public:
 
     void rotateLeft(float delta);
     void rotateRight(float delta);
+
+    void setFovy(float fovy);
+    float getFovy() const;
 
 private:
     Camera() {}
@@ -507,6 +513,8 @@ private:
          _frontDirection    = Vec3(0, 0, -1), 
          _rightDirection    = Vec3(1, 0, 0),
          _upDirection       = Vec3(0, 1, 0);
+
+    float _fovy = 60;
 
 };
 
@@ -592,6 +600,8 @@ protected:
 class Obj3D : public Node {
 public:
     static Obj3D * create(const std::string &file);
+
+    virtual void release();
 
     void onDraw();
 
