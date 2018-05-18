@@ -1,14 +1,16 @@
-#ifndef _g_h_
-#define _g_h_
+#ifndef _HELP_H_
+#define _HELP_H_
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 #include <cmath>
 #include <map>
-#include <random>
+#include <fstream>
+
+namespace help {
 
 #pragma region Vector
 
@@ -225,112 +227,75 @@ typedef Matrix<4, 4> Mat4;
 
 #pragma endregion
 
-#pragma region Application
-
-class Scene;
-
-class Application {
-public:
-    bool initialize(const std::string &title, int width, int height, int * argc, char ** argv);
-
-    int run(Scene * scene);
-
-private:
-    static void display();
-    static void idle();
-
-};
-
-#pragma endregion
-
-#pragma region Director
-
-class Scene;
-
-class Director {
-public:
-    static Director * getInstance();
-
-    // current scene's display
-    void display();
-
-    // current scene's loop
-    void loop();
-
-    void setScene(Scene * scene);
-
-    Scene * getCurrentScene();
-
-    void setProjectionMatrix(const Mat4 &projection);
-    Mat4 getProjectionMatrix();
-
-private:
-    Director() {}
-    ~Director();
-
-private:
-    static Director _instance;
-
-    Scene * _currentScene;
-    // std::vector<Scene *> _scenes;
-
-    Mat4 _projectionMatrix;
-
-};
-
-#pragma endregion
-
-#pragma region Scene
-
-class Scene {
-public:
-    virtual void initialized() = 0;
-    virtual void released() {};
-    virtual void update() {};
-    virtual void draw() {};
-
-    void release();
-
-};
-
-#pragma endregion
-
-#pragma region Color
-
-// class Color3F {
-// public:
-//     float r, g, b;
-
-// public:
-//     Color3F(float r, float g, float b);
-//     Color3F();
-//     Color3F(const Color3F &other);
-
-// public:
-//     static const Color3F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
-
-// };
+#pragma region Color4F
 
 class Color4F {
 public:
-    float r, g, b, a;
+    Color4F() {
+        setToZero();
+    }
+
+    Color4F(const float r, const float g, const float b) {
+        _value[0] = r;
+        _value[1] = g;
+        _value[2] = b;
+        _value[3] = 1;
+     }
+
+    Color4F(const float r, const float g, const float b, const float a) : Color4F(r, g, b) {
+        _value[3] = a;
+     }
+    
+    Color4F(const Color4F &other) {
+        for (int i = 0; i < 4; i++) (*this)(i) = other(i);
+    }
+    
+    Color4F &operator=(const Color4F &other) {
+        for (int i = 0; i < 4; i++) (*this)(i) = other(i);
+        return *this;
+    }
+
+    float &operator()(unsigned int i) {
+        return _value[i];
+    }
+
+    const float &operator()(unsigned int i) const {
+        return _value[i];
+    }
+
+    operator const float *() const {
+        return _value;
+    }
+
+    operator float *() {
+        return _value;
+    }
+
+    Color4F &operator+=(const Color4F &other) {
+        for (int i = 0; i < 4; i++) (*this)(i) += other(i);
+        return *this;
+    }
+
+    Color4F &operator-=(const Color4F &other) {
+        for (int i = 0; i < 4; i++) (*this)(i) -= other(i);
+        return *this;
+    }
+
+    void setToZero() {
+        std::fill(_value, _value + 4, 0);
+    }
 
 public:
-    Color4F(float r, float g, float b, float a);
-    Color4F();
-    Color4F(const Color4F &other);
+    union {
+        struct {
+            float r, g, b, a;
+        };
+        float _value[4];
+    };
 
-public:
     static const Color4F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
 
 };
-
-
-#pragma endregion
-
-#pragma region Math
-
-
 
 #pragma endregion
 
@@ -413,21 +378,132 @@ Matrix<M, L> operator*(const Matrix<M, N> &A, const Matrix<N, L> &B) {
 
 #pragma endregion
 
-#pragma region Transform
+#pragma region Application
 
-Mat4 translate(float dx, float dy, float dz);
+class Scene;
 
-Mat4 rotate(float angle, float x, float y, float z);
+class Application {
+public:
+    Application(const std::string &title, int width, int height);
 
-Mat4 scale(float sx, float sy, float sz) ;
-        
-Mat4 lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ);
+    bool initialize(int argc, char ** argv);
+    int run(Scene * scene);
+    
+    static void displayFunction();
+    static void idleFunction();
+    static void keyboardFunction(unsigned char keycode, int x, int y);
+    static void specialFunction(int keycode, int x, int y);
 
-Mat4 ortho(float left, float right, float bottom, float top, float near, float far);
+protected:
+    std::string _title;
+    int _width, _height;
 
-Mat4 frustum(float left, float right, float bottom, float top, float near, float far);
+};
 
-Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
+#pragma endregion
+
+#pragma region Object
+
+class Object {
+public:
+    virtual void release();
+
+    void addChild(Object * child);
+
+    virtual void onDraw() {}
+
+protected:
+    std::vector<Object *> _children;
+
+};
+
+#pragma endregion
+
+#pragma region Scene
+
+class Scene : public Object {
+public:
+    void init();
+
+    virtual void release();
+
+    virtual void onDraw();
+
+public:
+    virtual void start() {}
+    virtual void update() {}
+    virtual void end() {}
+
+    virtual void onKeyboardPress(unsigned char keycode, int x, int y) {}
+    virtual void onSpecialKeyboardPress(int keycode, int x, int y) {}
+    
+};
+
+#pragma endregion
+
+#pragma region Node
+
+class Node : public Object {
+public:
+    Mat4 _modelMatrix;
+
+public:
+    void setPosition(const Vec3 &pos);
+    Vec3 getPosition();
+
+};
+
+#pragma endregion
+
+#pragma region SceneManager
+
+class SceneManager {
+public:
+    static SceneManager * get();
+
+    void setScene(Scene * scene);
+    Scene * getScene();
+
+private:
+    SceneManager() {}
+    ~SceneManager();
+
+    static SceneManager _instance;
+
+    Scene * _currentScene;
+
+};
+
+#pragma endregion
+
+#pragma region Camera
+
+class Camera {
+public:
+    static Camera * get();
+
+    Mat4 getView(); 
+
+    void moveForward(float delta);
+    void moveBackward(float delta);
+    void moveLeft(float delta);
+    void moveRight(float delta);
+
+    void rotateLeft(float delta);
+    void rotateRight(float delta);
+
+private:
+    Camera() {}
+    ~Camera() {}
+
+    static Camera _instance;
+
+    Vec3 _position          = Vec3(0, 2, 0), 
+         _frontDirection    = Vec3(0, 0, -1), 
+         _rightDirection    = Vec3(1, 0, 0),
+         _upDirection       = Vec3(0, 1, 0);
+
+};
 
 #pragma endregion
 
@@ -436,6 +512,7 @@ Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
 class Shader {
 public:
     static Shader * create(const std::string &vert, const std::string &frag);
+    static Shader * createWithString(const std::string &vert, const std::string &frag);
 
     void addUniform(const std::string &uniform);
     void addAttrib(const std::string &attrib);
@@ -455,8 +532,10 @@ public:
 
 protected:
     virtual void initWithFile(const std::string &vert, const std::string &frag);
+    virtual void initWithString(const std::string &vert, const std::string &frag);
 
     GLuint createShaderFromFile(const std::string &file, GLuint shaderType);
+    GLuint createShaderFromString(const std::string &str, GLuint shaderType);
 
 protected:
     GLuint _program;
@@ -470,7 +549,7 @@ protected:
 
 #pragma region Primitive2D
 
-class Primitive2D {
+class Primitive2D : public Node {
 public:
     Primitive2D(float width);
 
@@ -482,43 +561,57 @@ public:
 
     void drawSolidRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color);
 
-    void draw();
+    virtual void onDraw();
 
     void clear();
 
-    void release();
+    virtual void release();
 
 protected:
     bool init();
 
 protected:
-    float _width;
+    float _lineWidth;
 
-    std::vector<Vec3> _lineVertices, _polygonVertices;
-    std::vector<Color4F> _lineColors, _polygonColors;
+    std::vector<Vec3> _pointVertices, _lineVertices, _polygonVertices;
+    std::vector<Color4F> _pointColors, _lineColors, _polygonColors;
 
     Shader * _shader;
 
-    Mat4 _modelViewMatrix;
-
 };
 
 #pragma endregion
 
-#pragma region Random 
+#pragma region Obj3D
 
-class Random {
+class Obj3D : public Node {
 public:
-    static int random(int min, int max);
-    static int randomWithSeed(int seed, int min, int max);
+    static Obj3D * create(const std::string &file);
 
-private:
+    void onDraw();
 
+protected:  
+    bool init(const std::string &file);
+
+    std::vector<Vec3> _vertices;
+
+    Shader * _shader;
 };
 
-#define random(min, max) Random::random(min, max)
-#define randomWithSeed(seed, min, max) Random::randomWithSeed(seed, min, max)
+#pragma endregion
+
+#pragma region Transform
+
+Mat4 translate(float dx, float dy, float dz);
+Mat4 rotate(float angle, float x, float y, float z);
+Mat4 scale(float sx, float sy, float sz) ;   
+Mat4 lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ);
+Mat4 ortho(float left, float right, float bottom, float top, float near, float far);
+Mat4 frustum(float left, float right, float bottom, float top, float near, float far);
+Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
 
 #pragma endregion
+
+};
 
 #endif

@@ -1,30 +1,44 @@
-#include "gg.h"
+#include "help.h"
 
-#include <vector>
+#include <iostream>
 
-class MainScene : public Scene {
+using namespace help;
+
+class MainScene : public help::Scene {
 public:
-    int smallSquareCount, mediumSquareCount, bigSquareCount;
+    static MainScene * create() {
+        auto ret = new MainScene();
+        return ret;
+    }
 
-    static MainScene * create();
+    void start() {
+        auto desk = Obj3D::create("./data/desk.obj");
+        desk->setPosition(Vec3(0, 0, 0));
+        addChild(desk);
+    }
 
-    void initialized();
-    void draw();
-    void released();
+    void onKeyboardPress(unsigned char keycode, int x, int y) {
+        if (keycode =='a' || keycode == 'A') {
+            Camera::get()->rotateLeft(0.1);
+        }
 
-    void drawScreen();
+        if (keycode == 'd' || keycode == 'D') {
+            Camera::get()->rotateRight(0.1);
+        }
+    }
 
-    void makeRects(const std::vector<Vec3> &vertices, float size, int period, int count);
+    void onSpecialKeyboardPress(int keycode, int x, int y) {
+        if (keycode == GLUT_KEY_UP) Camera::get()->moveForward(0.1);
+        if (keycode == GLUT_KEY_DOWN) Camera::get()->moveBackward(0.1);
+        if (keycode == GLUT_KEY_LEFT) Camera::get()->moveLeft(0.1);
+        if (keycode == GLUT_KEY_RIGHT) Camera::get()->moveRight(0.1);
+    }
 
-    void drawRect(const Vec3 &pos, float size, int n);
+    void update() {
+    }
 
-    std::vector<Vec3> getHilbertCurve(int iter, float length, float offset, const Vec3 &pos);
+    void end() {
+        
+    }
 
-    static void menuCallback(int value);
-
-private:
-    Primitive2D * rect;
-
-    std::vector<Vec3> vertices;
-    std::vector<Color4F> preColors;
 };

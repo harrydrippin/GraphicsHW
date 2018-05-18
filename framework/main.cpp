@@ -1,13 +1,13 @@
-#include "gg.h"
+#include "help.h"
 
 #include "MainScene.h"
 
-#include <iostream>
+using namespace help;
 
-int main(int argc, char * argv[]) {
-    Application app;
+int main(int argc, char ** argv) {
+    Application app("title", 640, 640);
 
-    if (!app.initialize("test", 480, 480, &argc, argv)) return 1;
+    if (!app.initialize(argc, argv)) return 1;
 
     return app.run(MainScene::create());
 }
