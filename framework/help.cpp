@@ -185,17 +185,21 @@ void Camera::moveRight(float delta) {
 }
 
 void Camera::rotateLeft(float delta) {
-    // _frontDirection.z -= delta;
-    // _frontDirection.normalize();
+    auto ret = rotate(delta, 0, 1, 0) * Vec4(_frontDirection, 1);
+    _frontDirection.x = ret.x;
+    _frontDirection.y = ret.y;
+    _frontDirection.z = ret.z;
+    
     _rightDirection = _frontDirection.cross(_upDirection);
-    printf("%f %f %f\n", _frontDirection.x, _frontDirection.y, _frontDirection.z);
 }
 
 void Camera::rotateRight(float delta) {
-    _frontDirection.z += delta;
-    _frontDirection.normalize();
+    auto ret = rotate(delta, 0, -1, 0) * Vec4(_frontDirection, 1);
+    _frontDirection.x = ret.x;
+    _frontDirection.y = ret.y;
+    _frontDirection.z = ret.z;
+    
     _rightDirection = _frontDirection.cross(_upDirection);
-    printf("%f %f %f\n", _frontDirection.x, _frontDirection.y, _frontDirection.z);
 }
 
 #pragma endregion

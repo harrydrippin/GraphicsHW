@@ -32,11 +32,16 @@ public:
 
     Vector(const float s, const float t, const float u) : Vector(s, t) {
         _value[2] = u;
-     }
+    }
 
     Vector(const float s, const float t, const float u, const float v) : Vector(s, t, u) {
         _value[3] = v;
-     }
+    }
+
+    Vector(const Vector<3> &other, float v) {
+        for (int i = 0; i < 3; i++) (*this)(i) = other(i);
+        _value[3] = v;
+    }
     
     Vector(const Vector<N> &other) {
         for (int i = 0; i < N; i++) (*this)(i) = other(i);

@@ -19,11 +19,11 @@ public:
 
     void onKeyboardPress(unsigned char keycode, int x, int y) {
         if (keycode =='a' || keycode == 'A') {
-            Camera::get()->rotateLeft(0.1);
+            Camera::get()->rotateLeft(10);
         }
 
         if (keycode == 'd' || keycode == 'D') {
-            Camera::get()->rotateRight(0.1);
+            Camera::get()->rotateRight(10);
         }
     }
 

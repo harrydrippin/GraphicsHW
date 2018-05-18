@@ -26,6 +26,7 @@
         "system_error": "cpp",
         "vector": "cpp",
         "bitset": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "__bit_reference": "cpp"
     }
 }
