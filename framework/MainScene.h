@@ -73,4 +73,5 @@ public:
     Obj3D * desk, * fan, * sofa, * tv;
 
     float fovy = 60;
+    int xx = 0, yy = 0;
 };

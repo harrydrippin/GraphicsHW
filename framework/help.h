@@ -398,6 +398,7 @@ public:
     static void idleFunction();
     static void keyboardFunction(unsigned char keycode, int x, int y);
     static void specialFunction(int keycode, int x, int y);
+    static void mouseMoveFunction(int x, int y);
 
 protected:
     std::string _title;
@@ -441,6 +442,7 @@ public:
 
     virtual void onKeyboardPress(unsigned char keycode, int x, int y) {}
     virtual void onSpecialKeyboardPress(int keycode, int x, int y) {}
+    virtual void onMouseMove(int x, int y) {}
     
 };
 

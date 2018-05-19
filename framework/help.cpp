@@ -52,6 +52,7 @@ bool Application::initialize(int argc, char ** argv) {
     glutIdleFunc(Application::idleFunction);
     glutKeyboardFunc(Application::keyboardFunction);
     glutSpecialFunc(Application::specialFunction);
+    glutPassiveMotionFunc(Application::mouseMoveFunction);
 
     return true;
 }
@@ -86,6 +87,12 @@ void Application::keyboardFunction(unsigned char keycode, int x, int y) {
 
 void Application::specialFunction(int keycode, int x, int y) {
     SceneManager::get()->getScene()->onSpecialKeyboardPress(keycode, x, y);
+
+    glutPostRedisplay();
+}
+
+void Application::mouseMoveFunction(int x, int y) {
+    SceneManager::get()->getScene()->onMouseMove(x, y);
 
     glutPostRedisplay();
 }
@@ -168,6 +175,7 @@ Mat4 Camera::getProjection() {
     return perspective(_fovy, 1.0f, 0.001f, 10000.0f);
 }
 
+// 나중에 시점이 위 아래를 보고 있어도 앞으로 이동할 때 그 방향으로 땅을 뚫고 가면 안되기 때문에 y값은 더하지 않음.
 void Camera::moveForward(float delta) {
     _position.x += _frontDirection.x * delta;
     _position.z += _frontDirection.z * delta;
