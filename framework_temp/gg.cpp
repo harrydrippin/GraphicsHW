@@ -1,14 +1,169 @@
-#include "help.h"
+#include "gg.h"
 
-#include <sstream>
 #include <iostream>
-#include <locale>
+#include <functional>
+#include <fstream>
 
 using namespace std;
 
-namespace help {
+#pragma region Application
 
-#pragma region Color4F
+bool Application::initialize(const std::string &title, int width, int height, int * argc, char ** argv) {
+    glutInit(argc, argv);
+    glutInitWindowSize(width, height);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+    glutCreateWindow(title.c_str());
+
+    GLenum res = glewInit();
+    if (res != GLEW_OK) {
+        std::cout << "cannot initialize GLEW" << std::endl;
+        return false;
+    }
+
+    // glClearColor(0.8, 0.8, 0.8, 1);
+    glClearColor(1, 1, 1, 1);
+
+    // glMatrixMode(GL_PROJECTION);
+    // glLoadIdentity();
+
+    // glOrtho(0, width, 0, height, -1, 1);
+    // glOrtho(-1, 1, -1, 1, -1, 1);
+    Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
+
+    // glEnable(GL_DEPTH_TEST);
+
+    glutDisplayFunc(Application::display);
+    glutIdleFunc(Application::idle);
+    glutKeyboardFunc(Application::keyboard);
+
+    return true;
+}
+
+int Application::run(Scene * scene) {
+    Director::getInstance()->setScene(scene);
+
+    glutMainLoop();
+
+    return 0;
+}
+
+void Application::display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    Director::getInstance()->display();
+
+    glutSwapBuffers();
+}
+
+void Application::idle() {
+    Director::getInstance()->loop();
+
+    glutPostRedisplay();
+}
+
+void Application::keyboard(unsigned char key, int x, int y) {
+    auto eventDispatcher = Director::getInstance()->getCurrentScene()->getEventDispatcher();
+    eventDispatcher->
+}
+
+void Application::mouseMove(int x, int y) {
+
+}
+
+#pragma endregion
+
+#pragma region Director
+
+Director Director::_instance;
+
+Director::~Director() {
+    if (_currentScene) {
+        _currentScene->release();
+    }
+}
+
+Director * Director::getInstance() {
+    return &_instance;
+}
+
+void Director::setScene(Scene * scene) {
+    if (_currentScene) {
+        _currentScene->release();
+    }
+
+    _currentScene = scene;
+    _currentScene->initialized();
+}
+
+void Director::display() {
+    _currentScene->draw();
+}
+
+void Director::loop() {
+    _currentScene->update();
+}
+
+void Director::keyboardInput(unsigned char key, int x, int y) {
+    _currentScene->keyInput(key, x, y);
+}
+
+Scene * Director::getCurrentScene() {
+    return _currentScene;
+}
+
+void Director::setProjectionMatrix(const Mat4 &projection) {
+    _projectionMatrix = projection;
+}
+
+Mat4 Director::getProjectionMatrix() {
+    return _projectionMatrix;
+}
+
+#pragma endregion
+
+#pragma region Scene
+
+void Scene::init() {
+    _eventDispatcher = EventDispatcher::create();
+}
+
+void Scene::release() {
+    this->released();
+    _eventDispatcher->release();
+
+    delete this;
+}
+
+EventDispatcher * Scene::getEventDispatcher() {
+    return _eventDispatcher;
+}
+
+#pragma endregion
+
+#pragma region Color
+
+// const Color3F Color3F::BLACK      = Color3F(0, 0, 0);
+// const Color3F Color3F::WHITE      = Color3F(1, 1, 1);
+// const Color3F Color3F::RED        = Color3F(1, 0, 0);
+// const Color3F Color3F::GREEN      = Color3F(0, 1, 0);
+// const Color3F Color3F::BLUE       = Color3F(0, 0, 1);
+// const Color3F Color3F::YELLOW     = Color3F(1, 1, 0);
+// const Color3F Color3F::AQUA       = Color3F(0, 1, 1);
+// const Color3F Color3F::MAGENTA    = Color3F(1, 0, 1);
+// const Color3F Color3F::ORANGE     = Color3F(1, 0.647, 0);
+// const Color3F Color3F::GRAY       = Color3F(0.5, 0.5, 0.5);
+
+// Color3F::Color3F(float r, float g, float b) : r(r), g(g), b(b) {
+// }
+
+// Color3F::Color3F() : r(0), g(0), b(0) {
+// }
+
+// Color3F::Color3F(const Color3F &other) {
+//     this->r = other.r;
+//     this->g = other.g;
+//     this->b = other.b;
+// }
 
 const Color4F Color4F::BLACK      = Color4F(0, 0, 0, 1);
 const Color4F Color4F::WHITE      = Color4F(1, 1, 1, 1);
@@ -21,210 +176,17 @@ const Color4F Color4F::MAGENTA    = Color4F(1, 0, 1, 1);
 const Color4F Color4F::ORANGE     = Color4F(1, 0.647, 0, 1);
 const Color4F Color4F::GRAY       = Color4F(0.5, 0.5, 0.5, 1);
 
-#pragma endregion
-
-#pragma region Application
-
-Application::Application(const std::string &title, int width, int height) :
-_title(title),
-_width(width),
-_height(height) {
+Color4F::Color4F(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {
 }
 
-bool Application::initialize(int argc, char ** argv) {
-    glutInit(&argc, argv);
-    glutInitWindowSize(_width, _height);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-    glutCreateWindow(_title.c_str());
-
-    GLenum res = glewInit();
-    if (res != GLEW_OK) {
-        std::cout << "cannot initialize GLEW" << std::endl;
-        return false;
-    }
-
-    glClearColor(1, 1, 1, 1);
-
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    // for wireframe rendering  
-    // Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
-
-    glutDisplayFunc(Application::displayFunction);
-    glutIdleFunc(Application::idleFunction);
-    glutKeyboardFunc(Application::keyboardFunction);
-    glutSpecialFunc(Application::specialFunction);
-    glutPassiveMotionFunc(Application::mouseMoveFunction);
-
-    return true;
+Color4F::Color4F() : r(0), g(0), b(0), a(0) {
 }
 
-int Application::run(Scene * scene) {
-    SceneManager::get()->setScene(scene);
-
-    glutMainLoop();
-
-    return 0;
-}
-
-void Application::displayFunction() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    SceneManager::get()->getScene()->onDraw();
-
-    glutSwapBuffers();
-}
-
-void Application::idleFunction() {
-    SceneManager::get()->getScene()->update();
-
-    glutPostRedisplay();
-}
-
-void Application::keyboardFunction(unsigned char keycode, int x, int y) {
-    SceneManager::get()->getScene()->onKeyboardPress(keycode, x, y);
-
-    glutPostRedisplay();
-}
-
-void Application::specialFunction(int keycode, int x, int y) {
-    SceneManager::get()->getScene()->onSpecialKeyboardPress(keycode, x, y);
-
-    glutPostRedisplay();
-}
-
-void Application::mouseMoveFunction(int x, int y) {
-    SceneManager::get()->getScene()->onMouseMove(x, y);
-
-    glutPostRedisplay();
-}
-
-#pragma endregion
-
-#pragma region Object 
-
-void Object::release() {
-    for (auto &child : _children) child->release();
-
-    delete this;
-}
-
-void Object::addChild(Object * child) {
-    _children.push_back(child);
-}
-
-#pragma endregion
-
-#pragma region Scene 
-
-void Scene::init() {
-    start();
-}
-
-void Scene::onDraw() {
-    for (auto &child : _children) child->onDraw();
-}
-
-void Scene::release() {
-    end();
-
-    Object::release();
-}
-
-#pragma endregion
-
-#pragma region SceneManager 
-
-SceneManager SceneManager::_instance;
-
-SceneManager::~SceneManager() {
-    _currentScene->release();
-}
-
-SceneManager * SceneManager::get() {
-    return &_instance;
-}
-
-void SceneManager::setScene(Scene * scene) {
-    if (_currentScene) _currentScene->release();
-
-    _currentScene = scene;
-
-    _currentScene->init();
-}
-
-Scene * SceneManager::getScene() {
-    return _currentScene;
-}
-
-#pragma endregion
-
-#pragma region Camera
-
-Camera Camera::_instance = Camera();
-
-Camera * Camera::get() {
-    return &_instance;
-}
-
-Mat4 Camera::getView() {
-    return lookAt(_position.x, _position.y, _position.z,
-                  _position.x + _frontDirection.x, _position.y + _frontDirection.y, _position.z + _frontDirection.z,
-                  _upDirection.x, _upDirection.y, _upDirection.z);
-}
-
-Mat4 Camera::getProjection() {
-    return perspective(_fovy, 1.0f, 0.001f, 10000.0f);
-}
-
-void Camera::moveVertical(float delta) {
-    _position += _frontDirection * delta;
-}
-
-void Camera::moveHorizontal(float delta) {
-    _position += _rightDirection * delta;
-}
-
-void Camera::rotate(float delta) {
-    auto ret = help::rotate(delta, 0, -1, 0) * Vec4(_frontDirection, 1);
-    _frontDirection.x = ret.x;
-    _frontDirection.y = ret.y;
-    _frontDirection.z = ret.z;
-    
-    _rightDirection = _frontDirection.cross(_upDirection);
-    _upDirection = _rightDirection.cross(_frontDirection);
-}
-
-void Camera::setFovy(float fovy) {
-    _fovy = fovy;
-}
-
-float Camera::getFovy() const {
-    return _fovy;
-}
-
-#pragma endregion
-
-#pragma region Node
-
-Node::Node() {
-    _trMat.setIdentity();
-    _rotMat.setIdentity();
-    _sclMat.setIdentity();
-}
-
-void Node::setPosition(const Vec3 &pos) {
-    _trMat = translate(pos.x, pos.y, pos.z);
-}
-
-void Node::setRotation(float angle, const Vec3 &rot) {
-    _rotMat = rotate(angle, rot.x, rot.y, rot.z);
-}
-
-void Node::setScale(const Vec3 &s) {
-    _sclMat = scale(s.x, s.y, s.z);
-}
-
-void Node::transform() {
-    _modelMatrix = _trMat * _rotMat * _sclMat;
+Color4F::Color4F(const Color4F &other) {
+    this->r = other.r;
+    this->g = other.g;
+    this->b = other.b;
+    this->a = other.a;
 }
 
 #pragma endregion
@@ -498,7 +460,7 @@ bool Primitive2D::init() {
     _shader->addAttrib("a_position");
     _shader->addAttrib("a_color");
 
-    _modelMatrix.setIdentity();
+    _modelViewMatrix.setIdentity();
 }
 
 void Primitive2D::drawPoint(const Vec3 &pos, float size, const Color4F &color) {
@@ -534,19 +496,13 @@ void Primitive2D::drawSolidRectangle(const Vec3 &origin, const Vec3 &dest, const
     for (int i = 0; i < 6; i++) _polygonColors.push_back(color);
 }
 
-void Primitive2D::setShader(Shader * shader) {
-    _shader->release();
-    _shader = shader;
-}
-
-void Primitive2D::onDraw() {
+void Primitive2D::draw() {
     //draw point
     _shader->use();
 
-    transform();
-    auto pm = ortho(0, 640, 0, 640, -1, 1) * _modelMatrix;
+    auto mvp = _modelViewMatrix * Director::getInstance()->getProjectionMatrix();
 
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, pm);
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
 
     glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _pointVertices.data());
     glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _pointColors.data());
@@ -561,7 +517,9 @@ void Primitive2D::onDraw() {
     //draw line
     _shader->use();
 
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, pm);
+    // mvp = _modelViewMatrix * Director::getInstance()->getProjectionMatrix();
+
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
 
     glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _lineVertices.data());
     glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _lineColors.data());
@@ -576,7 +534,9 @@ void Primitive2D::onDraw() {
     //draw polygon
     _shader->use();
 
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, pm);
+    // mvp = _modelViewMatrix * Director::getInstance()->getProjectionMatrix();
+
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
 
     glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _polygonVertices.data());
     glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _polygonColors.data());
@@ -601,133 +561,61 @@ void Primitive2D::clear() {
 
 void Primitive2D::release() {
     this->clear();
+
     _shader->release();
 
-    Object::release();
+    delete this;
 }
 
 #pragma endregion
 
-#pragma region Obj3D
+#pragma region EventListener
 
-Obj3D * Obj3D::create(const std::string &file) {
-    auto ret = new Obj3D();
-    if (ret->init(file)) return ret;
-    
-    return nullptr;
+KeyboardEventListener * KeyboardEventListener::create() {
+    auto ret = new KeyboardEventListener();
+
+    return ret;
 }
 
-bool Obj3D::init(const std::string& filename) {
-	std::ifstream file(filename.c_str());
+MouseEventListener * MouseEventListener::create() {
+    auto ret = new MouseEventListener();
 
-	if (!file.is_open()) {
-		std::cerr << "failed to open file: " << filename << std::endl;
-		return false;
-	}
-
-	std::vector<Vec3> tmp_vertices;
-	std::vector<Vec2> tmp_texcoords;
-	std::vector<Vec3> tmp_normals;
-
-	std::string line;
-	std::locale loc;
-
-	float x, y, z;
-	std::string type_str;
-	char slash;				// get only on character '\'
-
-	std::stringstream ss;
-
-	while (!file.eof()) {
-		std::getline(file, line);
-
-		ss.clear();
-		ss.str(line);
-
-		// comment or space		
-		if (line[0] == '#' || std::isspace(line[0], loc)) {
-			continue; // skip
-		} else if (line.substr(0, 2) == "v ") { // vertex 
-			Vec3 vertex;
-			ss >> type_str >> vertex.x >> vertex.y >> vertex.z;
-			tmp_vertices.push_back(vertex);
-		} else if (line.substr(0, 3) == "vt ") { // texture coordinate
-			Vec2 texcoord;
-			ss >> type_str >> texcoord.x >> texcoord.y;
-			tmp_texcoords.push_back(texcoord);
-		} else if (line.substr(0, 3) == "vn ") { // vertex normal
-			Vec3 norm;
-			ss >> type_str >> norm.x >> norm.y >> norm.z;
-			tmp_normals.push_back(norm);
-		} else if (line.substr(0, 2) == "f ") { // faces
-			Vec3 vert_idx;
-			Vec3 coord_idx;
-
-			ss >> type_str >> vert_idx.x >> slash >> coord_idx.x >>
-				vert_idx.y >> slash >> coord_idx.y >>
-				vert_idx.z >> slash >> coord_idx.z;
-
-			_vertices.push_back(tmp_vertices[vert_idx[0] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[1] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[2] - 1]);
-		}
-	}
-	
-	std::cout << "finished to read: " << filename << std::endl;
-
-
-    string vert = "\
-        #version 120\n\
-        \
-        uniform mat4 u_pvm;\
-        attribute vec4 a_position;\
-        \
-        void main() {\
-            gl_Position = u_pvm * a_position;\
-        }\
-    ";
-
-    string frag = "\
-        #version 120\n\
-        \
-        void main() {\
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\
-        }\
-    ";
-
-    _shader = Shader::createWithString(vert, frag);
-
-    _shader->addUniform("u_pvm");
-    _shader->addAttrib("a_position");
-
-    _modelMatrix.setIdentity();
-
-	return true;
-}
-
-void Obj3D::onDraw() {
-    transform();
-
-    _shader->use();
-
-    auto mvp = Camera::get()->getProjection() * Camera::get()->getView() * _modelMatrix;
-
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
-	glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, false, 0, &_vertices[0]);
-	
-    _shader->enable();
-	glDrawArrays(GL_TRIANGLES, 0, _vertices.size());
-    _shader->disable();
-
-    _shader->unUse();
-}
-
-void Obj3D::release() {
-    _vertices.clear();
-    _shader->release();
-    Object::release();
+    return ret;
 }
 
 #pragma endregion
 
-};
+#pragma region EventDispatcher
+
+EventDispatcher * EventDispatcher::create() {
+    auto ret = new EventDispatcher();
+
+    return ret;
+}
+
+void EventDispatcher::release() {
+    delete this;
+}
+
+#pragma endregion
+
+#pragma region Random
+
+int Random::random(int min, int max) {
+    random_device rd;
+    mt19937_64 rnd(rd());
+
+    uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
+}
+
+int Random::randomWithSeed(int seed, int min, int max) {
+    mt19937_64 rnd(seed);
+
+    uniform_int_distribution<int> range(min, max);
+
+    return range(rnd);
+}
+
+#pragma endregion

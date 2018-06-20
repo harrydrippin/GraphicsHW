@@ -28,6 +28,9 @@
         "bitset": "cpp",
         "iterator": "cpp",
         "__bit_reference": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "chrono": "cpp",
+        "iostream": "cpp",
+        "fstream": "cpp"
     }
 }

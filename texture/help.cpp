@@ -1,7 +1,10 @@
 #include "help.h"
 
+#include "SOIL.h"
+
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include <locale>
 
 using namespace std;
@@ -45,8 +48,14 @@ bool Application::initialize(int argc, char ** argv) {
 
     glClearColor(1, 1, 1, 1);
 
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    // for wireframe rendering  
+    glFrontFace(GL_CCW);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(Application::displayFunction);
     glutIdleFunc(Application::idleFunction);
@@ -121,6 +130,7 @@ void Scene::init() {
 
 void Scene::onDraw() {
     for (auto &child : _children) child->onDraw();
+    draw();
 }
 
 void Scene::release() {
@@ -343,7 +353,7 @@ Mat4 perspective(float fovy, float aspect, float zNear, float zFar) {
     // rfovy = (fovy * M_PI / 180.0) / 2.0
     float rfovy = fovy * M_PI / 360.0;
 
-    height = zNear * std::tanf(rfovy);
+    height = zNear * std::tan(rfovy);
     width = height * aspect;
 
     return frustum(-width, width, -height, height, zNear, zFar);
@@ -451,6 +461,39 @@ void Shader::release() {
     _attribLocations.clear();
 
     delete this;
+}
+
+void Shader::printError(const std::string& op) {
+    int error;
+	while ((error = glGetError()) != GL_NO_ERROR) {
+		std::string errorStr = "UNKNOWN";
+		switch (error) {
+		case 0:
+			errorStr = "GL_NO_ERROR";
+			break;
+		case 1280:
+			errorStr = "GL_INVALID_ENUM";
+			break;
+		case 1281:
+			errorStr = "GL_INVALID_VALUE";
+			break;
+		case 1282:
+			errorStr = "GL_INVALID_OPERATION";
+			break;
+		case 1283:
+			errorStr = "GL_STACK_OVERFLOW";
+			break;
+		case 1284:
+			errorStr = "GL_STACK_UNDERFLOW";
+			break;
+		case 1285:
+			errorStr = "GL_OUT_OF_MEMORY";
+			break;
+		default:
+			break;
+		}
+		std::cerr << op << " glError " << errorStr << std::endl;
+	}
 }
 
 #pragma endregion
@@ -660,45 +703,19 @@ bool Obj3D::init(const std::string& filename) {
 			ss >> type_str >> norm.x >> norm.y >> norm.z;
 			tmp_normals.push_back(norm);
 		} else if (line.substr(0, 2) == "f ") { // faces
-			Vec3 vert_idx;
-			Vec3 coord_idx;
+            int size = 3;//std::count(line.begin(), line.end(), ' ') - 1;
 
-			ss >> type_str >> vert_idx.x >> slash >> coord_idx.x >>
-				vert_idx.y >> slash >> coord_idx.y >>
-				vert_idx.z >> slash >> coord_idx.z;
-
-			_vertices.push_back(tmp_vertices[vert_idx[0] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[1] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[2] - 1]);
+            ss >> type_str;
+            int vert_idx, coord_idx, norm_idx;
+            for (int i = 0; i < size; i++) {
+                ss >> vert_idx >> slash /*>> coord_idx*/ >> slash >> norm_idx;
+			    _vertices.push_back(tmp_vertices[vert_idx - 1]);
+                _normals.push_back(tmp_normals[norm_idx - 1]);
+            }
 		}
 	}
 	
 	std::cout << "finished to read: " << filename << std::endl;
-
-
-    string vert = "\
-        #version 120\n\
-        \
-        uniform mat4 u_pvm;\
-        attribute vec4 a_position;\
-        \
-        void main() {\
-            gl_Position = u_pvm * a_position;\
-        }\
-    ";
-
-    string frag = "\
-        #version 120\n\
-        \
-        void main() {\
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\
-        }\
-    ";
-
-    _shader = Shader::createWithString(vert, frag);
-
-    _shader->addUniform("u_pvm");
-    _shader->addAttrib("a_position");
 
     _modelMatrix.setIdentity();
 
@@ -707,25 +724,61 @@ bool Obj3D::init(const std::string& filename) {
 
 void Obj3D::onDraw() {
     transform();
-
-    _shader->use();
-
-    auto mvp = Camera::get()->getProjection() * Camera::get()->getView() * _modelMatrix;
-
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
-	glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, false, 0, &_vertices[0]);
-	
-    _shader->enable();
+    
 	glDrawArrays(GL_TRIANGLES, 0, _vertices.size());
-    _shader->disable();
-
-    _shader->unUse();
 }
 
 void Obj3D::release() {
     _vertices.clear();
-    _shader->release();
     Object::release();
+}
+
+#pragma endregion
+
+#pragma region texture
+
+Texture *Texture::create() {
+    auto ret = new Texture();
+
+    return ret;
+}
+
+void Texture::loadTexture(const std::string &file) {
+    int width, height, channels;
+    unsigned char* image = SOIL_load_image(file.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
+
+    GLuint texid;
+
+    glGenTextures(1, &texid);
+    glBindTexture(GL_TEXTURE_2D, texid);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    SOIL_free_image_data(image);
+
+    _texid.push_back(texid);
+    _width.push_back(width);
+    _height.push_back(height);
+}
+
+void Texture::bindTextures() {
+    for (int i = 0; i < _texid.size(); i++) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, _texid[i]);
+    }
+}
+
+void Texture::release() {
+    _texid.clear();
+    _width.clear();
+    _height.clear();
+
+    delete this;
 }
 
 #pragma endregion

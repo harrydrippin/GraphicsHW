@@ -1,16 +1,14 @@
-#ifndef _HELP_H_
-#define _HELP_H_
+#ifndef _g_h_
+#define _g_h_
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-#include <string>
 #include <vector>
+#include <string>
 #include <cmath>
 #include <map>
-#include <fstream>
-
-namespace help {
+#include <random>
 
 #pragma region Vector
 
@@ -25,25 +23,20 @@ public:
         std::fill(_value, _value + N, elem);
     }
 
-    Vector(const float s, const float t) : Vector(0) { 
+    Vector(const float s, const float t) { 
         _value[0] = s;
         _value[1] = t;
     }
 
     Vector(const float s, const float t, const float u) : Vector(s, t) {
         _value[2] = u;
-    }
+     }
 
     Vector(const float s, const float t, const float u, const float v) : Vector(s, t, u) {
         _value[3] = v;
-    }
-
-    Vector(const Vector<3> &other, float v) {
-        for (int i = 0; i < 3; i++) (*this)(i) = other(i);
-        _value[3] = v;
-    }
-
-    Vector(const Vector<4> &other) {
+     }
+    
+    Vector(const Vector<N> &other) {
         for (int i = 0; i < N; i++) (*this)(i) = other(i);
     }
     
@@ -76,12 +69,6 @@ public:
     Vector &operator-=(const Vector<N> &other) {
         for (int i = 0; i < N; i++) (*this)(i) -= other(i);
         return *this;
-    }
-
-    Vector operator*(float s) {
-        Vector ret = *this;
-        for (int i = 0; i < N; i++) ret(i) *= s;
-        return ret;
     }
 
     void setToZero() {
@@ -238,75 +225,128 @@ typedef Matrix<4, 4> Mat4;
 
 #pragma endregion
 
-#pragma region Color4F
+#pragma region Application
+
+class Scene;
+
+class Application {
+public:
+    bool initialize(const std::string &title, int width, int height, int * argc, char ** argv);
+
+    int run(Scene * scene);
+
+private:
+    static void display();
+    static void idle();
+    static void keyboard(unsigned char key, int x, int y);
+    static void mouseMove(int x, int y);
+
+};
+
+#pragma endregion
+
+#pragma region Director
+
+class Scene;
+
+class Director {
+public:
+    static Director * getInstance();
+
+    // current scene's display
+    void display();
+
+    // current scene's loop
+    void loop();
+
+    // current scene's keyboard input
+    void keyboardInput(unsigned char key, int x, int y);
+
+    void setScene(Scene * scene);
+
+    Scene * getCurrentScene();
+
+    void setProjectionMatrix(const Mat4 &projection);
+    Mat4 getProjectionMatrix();
+
+private:
+    Director() {}
+    ~Director();
+
+private:
+    static Director _instance;
+
+    Scene * _currentScene;
+    // std::vector<Scene *> _scenes;
+
+    Mat4 _projectionMatrix;
+
+};
+
+#pragma endregion
+
+#pragma region Scene
+
+class EventDispatcher;
+
+class Scene {
+public:
+    virtual void initialized() = 0;
+    virtual void released() {};
+    virtual void update() {};
+    virtual void draw() {};
+    virtual void keyInput(unsigned char key, int x, int y) {};
+
+    void release();
+
+    EventDispatcher * getEventDispatcher();
+
+protected:
+    virtual void init();
+
+protected:
+    EventDispatcher * _eventDispatcher;
+
+};
+
+#pragma endregion
+
+#pragma region Color
+
+// class Color3F {
+// public:
+//     float r, g, b;
+
+// public:
+//     Color3F(float r, float g, float b);
+//     Color3F();
+//     Color3F(const Color3F &other);
+
+// public:
+//     static const Color3F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
+
+// };
 
 class Color4F {
 public:
-    Color4F() {
-        setToZero();
-    }
-
-    Color4F(const float r, const float g, const float b) {
-        _value[0] = r;
-        _value[1] = g;
-        _value[2] = b;
-        _value[3] = 1;
-     }
-
-    Color4F(const float r, const float g, const float b, const float a) : Color4F(r, g, b) {
-        _value[3] = a;
-     }
-    
-    Color4F(const Color4F &other) {
-        for (int i = 0; i < 4; i++) (*this)(i) = other(i);
-    }
-    
-    Color4F &operator=(const Color4F &other) {
-        for (int i = 0; i < 4; i++) (*this)(i) = other(i);
-        return *this;
-    }
-
-    float &operator()(unsigned int i) {
-        return _value[i];
-    }
-
-    const float &operator()(unsigned int i) const {
-        return _value[i];
-    }
-
-    operator const float *() const {
-        return _value;
-    }
-
-    operator float *() {
-        return _value;
-    }
-
-    Color4F &operator+=(const Color4F &other) {
-        for (int i = 0; i < 4; i++) (*this)(i) += other(i);
-        return *this;
-    }
-
-    Color4F &operator-=(const Color4F &other) {
-        for (int i = 0; i < 4; i++) (*this)(i) -= other(i);
-        return *this;
-    }
-
-    void setToZero() {
-        std::fill(_value, _value + 4, 0);
-    }
+    float r, g, b, a;
 
 public:
-    union {
-        struct {
-            float r, g, b, a;
-        };
-        float _value[4];
-    };
+    Color4F(float r, float g, float b, float a);
+    Color4F();
+    Color4F(const Color4F &other);
 
+public:
     static const Color4F BLACK, WHITE, RED, GREEN, BLUE, YELLOW, AQUA, MAGENTA, ORANGE, GRAY;
 
 };
+
+
+#pragma endregion
+
+#pragma region Math
+
+
 
 #pragma endregion
 
@@ -389,144 +429,21 @@ Matrix<M, L> operator*(const Matrix<M, N> &A, const Matrix<N, L> &B) {
 
 #pragma endregion
 
-#pragma region Application
+#pragma region Transform
 
-class Scene;
+Mat4 translate(float dx, float dy, float dz);
 
-class Application {
-public:
-    Application(const std::string &title, int width, int height);
+Mat4 rotate(float angle, float x, float y, float z);
 
-    bool initialize(int argc, char ** argv);
-    int run(Scene * scene);
-    
-    static void displayFunction();
-    static void idleFunction();
-    static void keyboardFunction(unsigned char keycode, int x, int y);
-    static void specialFunction(int keycode, int x, int y);
-    static void mouseMoveFunction(int x, int y);
+Mat4 scale(float sx, float sy, float sz) ;
+        
+Mat4 lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ);
 
-protected:
-    std::string _title;
-    int _width, _height;
+Mat4 ortho(float left, float right, float bottom, float top, float near, float far);
 
-};
+Mat4 frustum(float left, float right, float bottom, float top, float near, float far);
 
-#pragma endregion
-
-#pragma region Object
-
-class Object {
-public:
-    virtual void release();
-
-    void addChild(Object * child);
-
-    virtual void onDraw() {}
-
-protected:
-    std::vector<Object *> _children;
-
-};
-
-#pragma endregion
-
-#pragma region Scene
-
-class Scene : public Object {
-public:
-    void init();
-
-    virtual void release();
-
-    virtual void onDraw();
-
-public:
-    virtual void start() {}
-    virtual void update() {}
-    virtual void end() {}
-
-    virtual void onKeyboardPress(unsigned char keycode, int x, int y) {}
-    virtual void onSpecialKeyboardPress(int keycode, int x, int y) {}
-    virtual void onMouseMove(int x, int y) {}
-    
-};
-
-#pragma endregion
-
-#pragma region Node
-
-class Node : public Object {
-public:
-    Mat4 _modelMatrix;
-    // Vec3 _position, _rotation, _scale;
-    Mat4 _trMat, _rotMat, _sclMat;
-
-public:
-    Node();
-
-    void setPosition(const Vec3 &pos);
-    void setRotation(float angle, const Vec3 &rot);
-    void setScale(const Vec3 &s);
-
-    void transform();
-
-};
-
-#pragma endregion
-
-#pragma region SceneManager
-
-class SceneManager {
-public:
-    static SceneManager * get();
-
-    void setScene(Scene * scene);
-    Scene * getScene();
-
-private:
-    SceneManager() {}
-    ~SceneManager();
-
-    static SceneManager _instance;
-
-    Scene * _currentScene;
-
-};
-
-#pragma endregion
-
-#pragma region Camera
-
-class Camera {
-public:
-    static Camera * get();
-
-    Mat4 getView(); 
-    Mat4 getProjection();
-
-    void moveVertical(float delta);
-    void moveHorizontal(float delta);
-
-    void rotate(float delta);
-
-    void setFovy(float fovy);
-    float getFovy() const;
-
-private:
-    Camera() {}
-    ~Camera() {}
-
-    static Camera _instance;
-
-    Vec3 _position          = Vec3(0, 2, 0), 
-         _frontDirection    = Vec3(0, 0, -1), 
-         _rightDirection    = Vec3(1, 0, 0),
-         _upDirection       = Vec3(0, 1, 0);
-
-    float _fovy = 60;
-
-};
+Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
 
 #pragma endregion
 
@@ -572,7 +489,7 @@ protected:
 
 #pragma region Primitive2D
 
-class Primitive2D : public Node {
+class Primitive2D {
 public:
     Primitive2D(float width);
 
@@ -584,13 +501,11 @@ public:
 
     void drawSolidRectangle(const Vec3 &origin, const Vec3 &dest, const Color4F &color);
 
-    void setShader(Shader * shader);
-
-    virtual void onDraw();
+    void draw();
 
     void clear();
 
-    virtual void release();
+    void release();
 
 protected:
     bool init();
@@ -603,42 +518,68 @@ protected:
 
     Shader * _shader;
 
+    Mat4 _modelViewMatrix;
+
 };
 
 #pragma endregion
 
-#pragma region Obj3D
+#pragma region EventListener
 
-class Obj3D : public Node {
+class EventListener {
+protected:
+
+};
+
+class KeyboardEventListener : public EventListener {
 public:
-    static Obj3D * create(const std::string &file);
+    static KeyboardEventListener * create();
 
-    virtual void release();
+};
 
-    void onDraw();
+class MouseEventListener : public EventListener {
+public:
+    static MouseEventListener * create();
 
-protected:  
-    bool init(const std::string &file);
-
-    std::vector<Vec3> _vertices;
-
-    Shader * _shader;
 };
 
 #pragma endregion
 
-#pragma region Transform
+#pragma region EventDispatcher
 
-Mat4 translate(float dx, float dy, float dz);
-Mat4 rotate(float angle, float x, float y, float z);
-Mat4 scale(float sx, float sy, float sz) ;   
-Mat4 lookAt(float eyeX, float eyeY, float eyeZ, float centerX, float centerY, float centerZ, float upX, float upY, float upZ);
-Mat4 ortho(float left, float right, float bottom, float top, float near, float far);
-Mat4 frustum(float left, float right, float bottom, float top, float near, float far);
-Mat4 perspective(float fovy, float aspect, float zNear, float zFar);
+class EventDispatcher {
+public:
+    static EventDispatcher * create();
+
+    void addEventListener(EventListener * listener);
+
+    void release();
+
+private:
+    EventDispatcher() {}
+    ~EventDispatcher() {}
+
+private:
+    // std::vector<EventListener
+
+};
 
 #pragma endregion
 
+#pragma region Random 
+
+class Random {
+public:
+    static int random(int min, int max);
+    static int randomWithSeed(int seed, int min, int max);
+
+private:
+
 };
+
+#define random(min, max) Random::random(min, max)
+#define randomWithSeed(seed, min, max) Random::randomWithSeed(seed, min, max)
+
+#pragma endregion
 
 #endif

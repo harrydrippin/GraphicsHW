@@ -1,7 +1,10 @@
 #include "help.h"
 
+#include "SOIL.h"
+
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include <locale>
 
 using namespace std;
@@ -45,8 +48,14 @@ bool Application::initialize(int argc, char ** argv) {
 
     glClearColor(1, 1, 1, 1);
 
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    // for wireframe rendering  
+    glFrontFace(GL_CCW);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(Application::displayFunction);
     glutIdleFunc(Application::idleFunction);
@@ -121,6 +130,7 @@ void Scene::init() {
 
 void Scene::onDraw() {
     for (auto &child : _children) child->onDraw();
+    draw();
 }
 
 void Scene::release() {
@@ -343,7 +353,7 @@ Mat4 perspective(float fovy, float aspect, float zNear, float zFar) {
     // rfovy = (fovy * M_PI / 180.0) / 2.0
     float rfovy = fovy * M_PI / 360.0;
 
-    height = zNear * std::tanf(rfovy);
+    height = zNear * std::tan(rfovy);
     width = height * aspect;
 
     return frustum(-width, width, -height, height, zNear, zFar);
@@ -451,6 +461,39 @@ void Shader::release() {
     _attribLocations.clear();
 
     delete this;
+}
+
+void Shader::printError(const std::string& op) {
+    int error;
+	while ((error = glGetError()) != GL_NO_ERROR) {
+		std::string errorStr = "UNKNOWN";
+		switch (error) {
+		case 0:
+			errorStr = "GL_NO_ERROR";
+			break;
+		case 1280:
+			errorStr = "GL_INVALID_ENUM";
+			break;
+		case 1281:
+			errorStr = "GL_INVALID_VALUE";
+			break;
+		case 1282:
+			errorStr = "GL_INVALID_OPERATION";
+			break;
+		case 1283:
+			errorStr = "GL_STACK_OVERFLOW";
+			break;
+		case 1284:
+			errorStr = "GL_STACK_UNDERFLOW";
+			break;
+		case 1285:
+			errorStr = "GL_OUT_OF_MEMORY";
+			break;
+		default:
+			break;
+		}
+		std::cerr << op << " glError " << errorStr << std::endl;
+	}
 }
 
 #pragma endregion
@@ -610,122 +653,403 @@ void Primitive2D::release() {
 
 #pragma region Obj3D
 
-Obj3D * Obj3D::create(const std::string &file) {
+Group::Group(const std::string &name) : _name(name), 
+                                        _mtlName("Default") {
+    _vertices.clear();
+    _normals.clear();
+    _texcoords.clear();
+}
+
+Material::Material() : _name("Default") {
+    _ambient = Vec4(0.5, 0.5, 0.5, 1.0);
+    _diffuse = Vec4(0.5, 0.5, 0.5, 1.0);
+    _specular = Vec4(0.5, 0.5, 0.5, 1.0);
+    _shininess = 1.0;
+}
+
+Material::Material(const std::string &name, 
+                   Vec4 &ambient, 
+                   Vec4 &diffuse, 
+                   Vec4 &specular, 
+                   float &shininess) : 
+_name(name),
+_ambient(ambient),
+_diffuse(diffuse),
+_specular(specular),
+_shininess(shininess) {
+}
+
+Obj3D * Obj3D::create(const std::string &file, const std::string &vsh, const std::string &fsh) {
     auto ret = new Obj3D();
-    if (ret->init(file)) return ret;
+    if (ret->init(file, vsh, fsh)) return ret;
     
     return nullptr;
 }
 
-bool Obj3D::init(const std::string& filename) {
-	std::ifstream file(filename.c_str());
+bool Obj3D::init(const std::string &filename, const std::string &vsh, const std::string &fsh) {
+    if (!loadObjFile(filename)) return false;
 
-	if (!file.is_open()) {
-		std::cerr << "failed to open file: " << filename << std::endl;
-		return false;
-	}
+    _shader = Shader::create(vsh, fsh);
 
-	std::vector<Vec3> tmp_vertices;
-	std::vector<Vec2> tmp_texcoords;
-	std::vector<Vec3> tmp_normals;
+    _shader->addAttrib("a_vertex");
+    _shader->addAttrib("a_texcoord");
+    _shader->addAttrib("a_normal");
 
-	std::string line;
-	std::locale loc;
+    _shader->addUniform("u_pvm_matrix");
+    _shader->addUniform("u_model_matrix");
+    _shader->addUniform("u_view_matrix");
+    _shader->addUniform("u_normal_matrix");
 
-	float x, y, z;
-	std::string type_str;
-	char slash;				// get only on character '\'
+    _shader->addUniform("u_light_vector");
+    _shader->addUniform("u_light_ambient");
+    _shader->addUniform("u_light_diffuse");
+    _shader->addUniform("u_light_specular");
 
-	std::stringstream ss;
+    _shader->addUniform("u_material_ambient");
+    _shader->addUniform("u_material_diffuse");
+    _shader->addUniform("u_material_specular");
+    _shader->addUniform("u_material_shininess");
 
-	while (!file.eof()) {
-		std::getline(file, line);
-
-		ss.clear();
-		ss.str(line);
-
-		// comment or space		
-		if (line[0] == '#' || std::isspace(line[0], loc)) {
-			continue; // skip
-		} else if (line.substr(0, 2) == "v ") { // vertex 
-			Vec3 vertex;
-			ss >> type_str >> vertex.x >> vertex.y >> vertex.z;
-			tmp_vertices.push_back(vertex);
-		} else if (line.substr(0, 3) == "vt ") { // texture coordinate
-			Vec2 texcoord;
-			ss >> type_str >> texcoord.x >> texcoord.y;
-			tmp_texcoords.push_back(texcoord);
-		} else if (line.substr(0, 3) == "vn ") { // vertex normal
-			Vec3 norm;
-			ss >> type_str >> norm.x >> norm.y >> norm.z;
-			tmp_normals.push_back(norm);
-		} else if (line.substr(0, 2) == "f ") { // faces
-			Vec3 vert_idx;
-			Vec3 coord_idx;
-
-			ss >> type_str >> vert_idx.x >> slash >> coord_idx.x >>
-				vert_idx.y >> slash >> coord_idx.y >>
-				vert_idx.z >> slash >> coord_idx.z;
-
-			_vertices.push_back(tmp_vertices[vert_idx[0] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[1] - 1]);
-			_vertices.push_back(tmp_vertices[vert_idx[2] - 1]);
-		}
-	}
-	
-	std::cout << "finished to read: " << filename << std::endl;
-
-
-    string vert = "\
-        #version 120\n\
-        \
-        uniform mat4 u_pvm;\
-        attribute vec4 a_position;\
-        \
-        void main() {\
-            gl_Position = u_pvm * a_position;\
-        }\
-    ";
-
-    string frag = "\
-        #version 120\n\
-        \
-        void main() {\
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\
-        }\
-    ";
-
-    _shader = Shader::createWithString(vert, frag);
-
-    _shader->addUniform("u_pvm");
-    _shader->addAttrib("a_position");
-
-    _modelMatrix.setIdentity();
-
-	return true;
+    return true;
 }
 
-void Obj3D::onDraw() {
-    transform();
+bool Obj3D::loadObjFile(const std::string &filename) {
+    std::ifstream file(filename.c_str());
 
+    if (!file.is_open()) {
+        std::cerr << "failed to open file: " << filename << std::endl;
+        return false;
+    }
+
+    std::string type;
+    char slash;
+
+    std::string line;
+    std::locale loc;
+
+    bool hasTexcoord = false;
+    bool hasNormal = false;
+
+    std::vector<Vec3> vertices, normals;
+    std::vector<Vec2> texcoords;
+
+    _groups.push_back(Group("Default"));
+    _materials["Default"] = Material();
+
+    PATH = filename.substr(0, filename.find_last_of('/'));
+
+    std::stringstream ss;
+
+    while (!file.eof()) {
+        std::getline(file, line);
+
+        ss.clear();
+        ss.str(line);
+
+        if (line[0] == '#' || std::isspace(line[0], loc)) continue;
+        else if (line.substr(0, 7) == "mtllib ") {
+            std::string mtlFileName;
+            ss >> type >> mtlFileName;
+            std::string fullpath = PATH + '/' + mtlFileName;
+            loadMtlFile(fullpath);
+        } else if (line.substr(0, 2) == "v ") {
+            Vec3 vertex;
+            ss >> type >> vertex.x >> vertex.y >> vertex.z;
+            vertices.push_back(vertex);
+        } else if (line.substr(0, 3) == "vt ") {
+            Vec2 texcoord;
+            ss >> type >> texcoord.x >> texcoord.y;
+            texcoords.push_back(texcoord);
+
+            hasTexcoord = true;
+        } else if (line.substr(0, 3) == "vn ") {
+            Vec3 norm;
+            ss >> type >> norm.x >> norm.y >> norm.z;
+            normals.push_back(norm);
+
+            hasNormal = true;
+        } else if (line.substr(0, 2) == "g ") {
+            std::string groupName;
+            ss >> type >> groupName;
+
+            _groups.push_back(Group(groupName));
+        } else if (line.substr(0, 7) == "usemtl ") {
+            std::string mtlName;
+            ss >> type >> mtlName;
+
+            _groups.back()._mtlName = mtlName;
+        } else if (line.substr(0, 2) == "f ") {
+            Group &group = _groups.back();
+
+            std::vector<std::string> lines;
+
+            Vec3 vertexIdx, texcoordIdx, normalIdx;
+
+            if (!hasTexcoord && !hasNormal) { // f v
+                ss >> type >> vertexIdx.x >> vertexIdx.y >> vertexIdx.z;
+
+                group._vertices.push_back(vertices[vertexIdx.x - 1]);
+                group._vertices.push_back(vertices[vertexIdx.y - 1]);
+                group._vertices.push_back(vertices[vertexIdx.z - 1]);
+            } else if (hasTexcoord && !hasNormal) { // f v/vt
+                ss >> type >> 
+                vertexIdx.x >> slash >> texcoordIdx.x >>
+                vertexIdx.y >> slash >> texcoordIdx.y >>
+                vertexIdx.z >> slash >> texcoordIdx.z;
+
+                group._vertices.push_back(vertices[vertexIdx.x - 1]);
+                group._vertices.push_back(vertices[vertexIdx.y - 1]);
+                group._vertices.push_back(vertices[vertexIdx.z - 1]);
+
+                group._texcoords.push_back(texcoords[texcoordIdx.x - 1]);
+                group._texcoords.push_back(texcoords[texcoordIdx.y - 1]);
+                group._texcoords.push_back(texcoords[texcoordIdx.z - 1]);
+            } else if (!hasTexcoord && hasNormal) { // f v//vn
+                ss >> type >>
+                vertexIdx.x >> slash >> slash >> normalIdx.x >>
+                vertexIdx.y >> slash >> slash >> normalIdx.y >>
+                vertexIdx.z >> slash >> slash >> normalIdx.z;
+
+                group._vertices.push_back(vertices[vertexIdx.x - 1]);
+                group._vertices.push_back(vertices[vertexIdx.y - 1]);
+                group._vertices.push_back(vertices[vertexIdx.z - 1]);
+
+                group._normals.push_back(normals[normalIdx.x - 1]);
+                group._normals.push_back(normals[normalIdx.y - 1]);
+                group._normals.push_back(normals[normalIdx.z - 1]);
+            } else { // f v/vt/vn
+                ss >> type >>
+                vertexIdx.x >> slash >> texcoordIdx.x >> slash >> normalIdx.x >>
+                vertexIdx.y >> slash >> texcoordIdx.y >> slash >> normalIdx.y >>
+                vertexIdx.z >> slash >> texcoordIdx.z >> slash >> normalIdx.z;
+
+                group._vertices.push_back(vertices[vertexIdx.x - 1]);
+                group._vertices.push_back(vertices[vertexIdx.y - 1]);
+                group._vertices.push_back(vertices[vertexIdx.z - 1]);
+
+                group._texcoords.push_back(texcoords[texcoordIdx.x - 1]);
+                group._texcoords.push_back(texcoords[texcoordIdx.y - 1]);
+                group._texcoords.push_back(texcoords[texcoordIdx.z - 1]);
+
+                group._normals.push_back(normals[normalIdx.x - 1]);
+                group._normals.push_back(normals[normalIdx.y - 1]);
+                group._normals.push_back(normals[normalIdx.z - 1]);
+            }
+        }
+    }
+
+    std::cout << "finished to read: " << filename << std::endl;
+    return true;
+}
+
+bool Obj3D::loadMtlFile(const std::string &filename) {
+    std::ifstream file(filename.c_str());
+
+    if (!file.is_open()) {
+        std::cerr << "failed to open file: " << filename << std::endl;
+        return false;
+    }
+
+    float r, g, b;
+    std::string type;
+
+    std::string line;
+    std::locale loc;
+
+    std::string name;
+    Vec4 ambient, diffuse, specular;
+    float shininess;
+
+    bool isName = false;
+    bool isKa = false;
+    bool isKd = false;
+    bool isKs = false;
+    bool isNs = false;
+
+    std::stringstream ss;
+
+    while (!file.eof()) {
+        std::getline(file, line);
+
+        ss.clear();
+        ss.str(line);
+
+        if (line[0] == '#' || std::isspace(line[0], loc)) continue;
+        else if (line.substr(0, 7) == "newmtl ") {
+            ss >> type >> name;
+            isName = true;
+        } else if (line.substr(0, 3) == "Ka ") {
+            ss >> type >> r >> g >> b;
+            ambient = Vec4(r, g, b, 1.0);
+            isKa = true;
+        } else if (line.substr(0, 3) == "Kd ") {
+            ss >> type >> r >> g >> b;
+            diffuse = Vec4(r, g, b, 1.0);
+            isKd = true;
+        } else if (line.substr(0, 3) == "Ks ") {
+            ss >> type >> r >> g >> b;
+            specular = Vec4(r, g, b, 1.0);
+            isKs = true;
+        } else if (line.substr(0, 3) == "Ns ") {
+            ss >> type >> shininess;
+            isNs = true;
+        }
+
+        if (isName && isKa && isKd && isKs && isNs) {
+            _materials[name] = Material(name, ambient, diffuse, specular, shininess);
+
+            isName = false;
+            isKa = false;
+            isKd = false;
+            isKs = false;
+            isNs = false;
+        }
+    }
+
+    std::cout << "finished to read: " << filename << std::endl;
+    return true;
+}
+
+void Obj3D::print() {
+    for (size_t i = 0; i < _groups.size(); ++i) {
+        Group& group = _groups[i];
+
+        Material& mtl = _materials[group._mtlName];
+        Vec4& ambient = mtl._ambient;
+        Vec4& diffuse = mtl._diffuse;
+        Vec4& specular = mtl._specular;
+        float& shininess = mtl._shininess;
+
+        std::cout << "Group: " << group._name << std::endl;
+        
+        std::cout << "\tUsemtl: " << group._mtlName << std::endl;
+        std::cout << "\t\tAmbient: " << ambient[0] << " " << ambient[1] << " " << ambient[2] << std::endl;
+        std::cout << "\t\tDiffuse: " << diffuse[0] << " " << diffuse[1] << " " << diffuse[2] << std::endl;
+        std::cout << "\t\tSpecular: " << specular[0] << " " << specular[1] << " " << specular[2] << std::endl;
+        std::cout << "\t\tShininess: " << shininess << std::endl;
+
+        std::cout << "\tVertices: " << group._vertices.size() << std::endl;
+        for (size_t i = 0; i < group._vertices.size(); ++i) {
+            // std::cout << "\t\t" << group._vertices[i][0] << " " << group._vertices[i][1] << " " << group._vertices[i][2] << std::endl;
+        }
+        std::cout << "\tTexcoord: " << group._texcoords.size() << std::endl;
+        for (size_t i = 0; i < group._texcoords.size(); ++i) {
+            // std::cout << "\t\t" << group._texcoords[i][0] << " " << group._texcoords[i][1] << std::endl;
+        }
+        std::cout << "\tNormal: " << group._normals.size() << std::endl;
+        for (size_t i = 0; i < group._normals.size(); ++i) {
+            // std::cout << "\t\t" << group._normals[i][0] << " " << group._normals[i][1] << " " << group._normals[i][2] << std::endl;
+        }    
+    }	
+}
+
+void Obj3D::draw() {
+    transform();
+    
     _shader->use();
 
-    auto mvp = Camera::get()->getProjection() * Camera::get()->getView() * _modelMatrix;
+    for (size_t i = 0; i < _groups.size(); i++) {
+        Group &group = _groups[i];
 
-    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, mvp);
-	glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, false, 0, &_vertices[0]);
-	
-    _shader->enable();
-	glDrawArrays(GL_TRIANGLES, 0, _vertices.size());
-    _shader->disable();
+        Material &mtl = _materials[group._mtlName];
+        Vec4 &ambient = mtl._ambient;
+        Vec4 &diffuse = mtl._diffuse;
+        Vec4 &specular = mtl._specular;
+        float &shininess = mtl._shininess;
+
+        auto projection = Camera::get()->getProjection();
+        auto viewInv    = Camera::get()->getView();
+        auto pvm        = projection * viewInv * _modelMatrix;
+        
+        glUniformMatrix4fv(_shader->getUniformLocation("u_pvm_matrix"), 1, false, pvm);
+
+        Mat3 norm;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                norm(i, j) = _modelMatrix(i, j); 
+            }
+        }
+        Mat4 view = viewInv.getInverse();
+        
+        glUniformMatrix4fv(_shader->getUniformLocation("u_model_matrix"), 1, false, _modelMatrix);
+        glUniformMatrix4fv(_shader->getUniformLocation("u_view_matrix"), 1, false, view);
+        glUniformMatrix3fv(_shader->getUniformLocation("u_normal_matrix"), 1, false, norm);
+
+        glUniform4fv(_shader->getUniformLocation("u_light_ambient"), 1, Vec4(1.0, 1.0, 1.0, 1.0));
+        glUniform4fv(_shader->getUniformLocation("u_light_diffuse"), 1, Vec4(1.0, 1.0, 1.0, 1.0));
+        glUniform4fv(_shader->getUniformLocation("u_light_specular"), 1, Vec4(1.0, 1.0, 1.0, 1.0));
+        glUniform3fv(_shader->getUniformLocation("u_light_vector"), 1, Vec3(10.0, 10.0, 10.0));
+
+        glUniform4fv(_shader->getUniformLocation("u_material_ambient"), 1, ambient);
+        glUniform4fv(_shader->getUniformLocation("u_material_diffuse"), 1, diffuse);
+        glUniform4fv(_shader->getUniformLocation("u_material_specular"), 1, specular);
+        glUniform1f(_shader->getUniformLocation("u_material_shininess"), shininess);
+
+        glVertexAttribPointer(_shader->getAttribLocation("a_vertex"), 3, GL_FLOAT, false, 0, group._vertices.data());
+        glVertexAttribPointer(_shader->getAttribLocation("a_texcoord"), 3, GL_FLOAT, false, 0, group._texcoords.data());
+        glVertexAttribPointer(_shader->getAttribLocation("a_normal"), 3, GL_FLOAT, false, 0, group._normals.data());
+
+        _shader->enable();
+        glDrawArrays(GL_TRIANGLES, 0, group._vertices.size());
+        _shader->disable();
+    }
 
     _shader->unUse();
 }
 
 void Obj3D::release() {
-    _vertices.clear();
+    _groups.clear();
+    _materials.clear();
     _shader->release();
     Object::release();
+}
+
+#pragma endregion
+
+#pragma region texture
+
+Texture *Texture::create() {
+    auto ret = new Texture();
+
+    return ret;
+}
+
+void Texture::loadTexture(const std::string &file) {
+    int width, height, channels;
+    unsigned char* image = SOIL_load_image(file.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
+
+    GLuint texid;
+
+    glGenTextures(1, &texid);
+    glBindTexture(GL_TEXTURE_2D, texid);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    SOIL_free_image_data(image);
+
+    _texid.push_back(texid);
+    _width.push_back(width);
+    _height.push_back(height);
+}
+
+void Texture::bindTextures() {
+    for (int i = 0; i < _texid.size(); i++) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, _texid[i]);
+    }
+}
+
+void Texture::release() {
+    _texid.clear();
+    _width.clear();
+    _height.clear();
+
+    delete this;
 }
 
 #pragma endregion

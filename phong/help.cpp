@@ -45,8 +45,14 @@ bool Application::initialize(int argc, char ** argv) {
 
     glClearColor(1, 1, 1, 1);
 
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    // for wireframe rendering  
+    glFrontFace(GL_CCW);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);    // for wireframe rendering  
     // Director::getInstance()->setProjectionMatrix(ortho(0, width, 0, height, -1, 1));
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(Application::displayFunction);
     glutIdleFunc(Application::idleFunction);
@@ -121,6 +127,7 @@ void Scene::init() {
 
 void Scene::onDraw() {
     for (auto &child : _children) child->onDraw();
+    draw();
 }
 
 void Scene::release() {
@@ -451,6 +458,39 @@ void Shader::release() {
     _attribLocations.clear();
 
     delete this;
+}
+
+void Shader::printError(const std::string& op) {
+    int error;
+	while ((error = glGetError()) != GL_NO_ERROR) {
+		std::string errorStr = "UNKNOWN";
+		switch (error) {
+		case 0:
+			errorStr = "GL_NO_ERROR";
+			break;
+		case 1280:
+			errorStr = "GL_INVALID_ENUM";
+			break;
+		case 1281:
+			errorStr = "GL_INVALID_VALUE";
+			break;
+		case 1282:
+			errorStr = "GL_INVALID_OPERATION";
+			break;
+		case 1283:
+			errorStr = "GL_STACK_OVERFLOW";
+			break;
+		case 1284:
+			errorStr = "GL_STACK_UNDERFLOW";
+			break;
+		case 1285:
+			errorStr = "GL_OUT_OF_MEMORY";
+			break;
+		default:
+			break;
+		}
+		std::cerr << op << " glError " << errorStr << std::endl;
+	}
 }
 
 #pragma endregion

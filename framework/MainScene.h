@@ -12,57 +12,14 @@ public:
     }
 
     void start() {
-        desk = Obj3D::create("./data/desk.obj");
-        desk->setPosition(Vec3(-5, 0, 0));
-        desk->setScale(Vec3(1.5, 1.5, 1.5));
-        addChild(desk);
-
-        fan = Obj3D::create("./data/fan.obj");
-        fan->setPosition(Vec3(0, 5, 0));
-        fan->setScale(Vec3(1.5, 1.5, 1.5));
-        addChild(fan);
-
-        sofa = Obj3D::create("./data/sofa.obj");
-        sofa->setPosition(Vec3(0, 0, 5));
-        sofa->setRotation(180, Vec3(0, 1, 0));
-        sofa->setScale(Vec3(1.5, 1.5, 1.5));
-        addChild(sofa);
-
-        tv = Obj3D::create("./data/tv.obj");
-        tv->setPosition(Vec3(0, 0, -5));
-        tv->setScale(Vec3(2, 2, 2));
-        addChild(tv);
-    }
-
-    void onKeyboardPress(unsigned char keycode, int x, int y) {
-        if (keycode =='a' || keycode == 'A') {
-            Camera::get()->rotateLeft(10);
-        }
-
-        if (keycode == 'd' || keycode == 'D') {
-            Camera::get()->rotateRight(10);
-        }
-
-        // if (keycode == 'w' || keycode == 'W') {
-        //     fovy += 10;
-        //     Camera::get()->setFovy(fovy);
-        // }
-
-        // if (keycode =='s' || keycode == 'S') {
-        //     fovy -= 10;
-        //     Camera::get()->setFovy(fovy);
-        // }
-    }
-
-    void onSpecialKeyboardPress(int keycode, int x, int y) {
-        if (keycode == GLUT_KEY_UP) Camera::get()->moveForward(1);
-        if (keycode == GLUT_KEY_DOWN) Camera::get()->moveBackward(1);
-        if (keycode == GLUT_KEY_LEFT) Camera::get()->moveLeft(1);
-        if (keycode == GLUT_KEY_RIGHT) Camera::get()->moveRight(1);
+        rect = Primitive2D::create(2);
+        rect->drawRectangle(Vec3(x, y), Vec3(x + 100, y + 100), Color4F::RED);
+        addChild(rect);
     }
 
     void update() {
-        fan->setRotation(3, Vec3(0, 1, 0));
+        rect->setPosition(Vec3(x, y));
+        x++; y++;
     }
 
     void end() {
@@ -70,8 +27,7 @@ public:
     }
 
 public:
-    Obj3D * desk, * fan, * sofa, * tv;
+    Primitive2D * rect;
+    float x = 100, y = 100;
 
-    float fovy = 60;
-    int xx = 0, yy = 0;
 };

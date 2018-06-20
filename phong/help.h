@@ -228,6 +228,65 @@ public:
         }
     }
 
+    Matrix<4, 4> getInverse() {
+        Matrix<4, 4> m = (*this);
+        float m00 = m(2, 2) * m(3, 3) - m(3, 2) * m(2, 3);
+        float m01 = m(2, 1) * m(3, 3) - m(3, 1) * m(2, 3);
+        float m02 = m(2, 1) * m(3, 2) - m(3, 1) * m(2, 2);
+        float m03 = m(2, 0) * m(3, 3) - m(3, 0) * m(2, 3);
+        float m04 = m(2, 0) * m(3, 2) - m(3, 0) * m(2, 2);
+        float m05 = m(2, 0) * m(3, 1) - m(3, 0) * m(2, 1);
+        float m06 = m(1, 2) * m(3, 3) - m(3, 2) * m(1, 3);
+        float m07 = m(1, 1) * m(3, 3) - m(3, 1) * m(1, 3);
+        float m08 = m(1, 1) * m(3, 2) - m(3, 1) * m(1, 2);
+        float m09 = m(1, 0) * m(3, 3) - m(3, 0) * m(1, 3);
+        float m10 = m(1, 0) * m(3, 2) - m(3, 0) * m(1, 2);
+        float m11 = m(1, 1) * m(3, 3) - m(3, 1) * m(1, 3);
+        float m12 = m(1, 0) * m(3, 1) - m(3, 0) * m(1, 1);
+        float m13 = m(1, 2) * m(2, 3) - m(2, 2) * m(1, 3);
+        float m14 = m(1, 1) * m(2, 3) - m(2, 1) * m(1, 3);
+        float m15 = m(1, 1) * m(2, 2) - m(2, 1) * m(1, 2);
+        float m16 = m(1, 0) * m(2, 3) - m(2, 0) * m(1, 3);
+        float m17 = m(1, 0) * m(2, 2) - m(2, 0) * m(1, 2);
+        float m18 = m(1, 0) * m(2, 1) - m(2, 0) * m(1, 1);
+
+        Matrix<4, 4> inverseMat;
+        inverseMat(0, 0) = + (m(1, 1) * m00 - m(1, 2) * m01 + m(1, 3) * m02);
+        inverseMat(0, 1) = - (m(1, 0) * m00 - m(1, 2) * m03 + m(1, 3) * m04);
+        inverseMat(0, 2) = + (m(1, 0) * m01 - m(1, 1) * m03 + m(1, 3) * m05);
+        inverseMat(0, 3) = - (m(1, 0) * m02 - m(1, 1) * m04 + m(1, 2) * m05);
+  
+        inverseMat(1, 0) = - (m(0, 1) * m00 - m(0, 2) * m01 + m(0, 3) * m02);
+        inverseMat(1, 1) = + (m(0, 0) * m00 - m(0, 2) * m03 + m(0, 3) * m04);
+        inverseMat(1, 2) = - (m(0, 0) * m01 - m(0, 1) * m03 + m(0, 3) * m05);
+        inverseMat(1, 3) = + (m(0, 0) * m02 - m(0, 1) * m04 + m(0, 2) * m05);
+  
+        inverseMat(2, 0) = + (m(0, 1) * m06 - m(0, 2) * m07 + m(0, 3) * m08);
+        inverseMat(2, 1) = - (m(0, 0) * m06 - m(0, 2) * m09 + m(0, 3) * m10);
+        inverseMat(2, 2) = + (m(0, 0) * m11 - m(0, 1) * m09 + m(0, 3) * m12);
+        inverseMat(2, 3) = - (m(0, 0) * m08 - m(0, 1) * m10 + m(0, 2) * m12);
+  
+        inverseMat(3, 0) = - (m(0, 1) * m13 - m(0, 2) * m14 + m(0, 3) * m15);
+        inverseMat(3, 1) = + (m(0, 0) * m13 - m(0, 2) * m16 + m(0, 3) * m17);
+        inverseMat(3, 2) = - (m(0, 0) * m14 - m(0, 1) * m16 + m(0, 3) * m18);
+        inverseMat(3, 3) = + (m(0, 0) * m15 - m(0, 1) * m17 + m(0, 2) * m18);
+
+        float det = m(0, 0) * inverseMat(0, 0) + 
+                    m(0, 1) * inverseMat(0, 1) + 
+                    m(0, 2) * inverseMat(0, 2) + 
+                    m(0, 3) * inverseMat(0, 3);
+
+        for (unsigned int i = 0; i < 4; i++) {
+            for (unsigned int j = 0; j < 4; j++) {
+                inverseMat(i, j) = inverseMat(i, j) / det;
+            }
+        }
+
+        inverseMat = inverseMat.transpose();
+
+        return inverseMat;
+    }
+
 protected:
     float _value[M * N];
 
@@ -445,6 +504,7 @@ public:
     virtual void start() {}
     virtual void update() {}
     virtual void end() {}
+    virtual void draw() {}
 
     virtual void onKeyboardPress(unsigned char keycode, int x, int y) {}
     virtual void onSpecialKeyboardPress(int keycode, int x, int y) {}
@@ -548,6 +608,8 @@ public:
 
     void use();
     void unUse();
+
+    void printError(const std::string& op);
 
     GLuint getProgram() const;
 
