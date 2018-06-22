@@ -1,0 +1,7 @@
+# path tag yangle sx sy sz px py pz mx my mz Mx My Mz
+./data/desk_with_normals.obj x 180 2 2 2 10 0 8 -2 0 -3 2 3.5 3
+./data/sofa_with_normals.obj x 0 2 2 2 0 0 0 -3 0 -1.5 3 2.5 1.5
+./data/tv_with_normals.obj x 180 2 2 2 0 0 16 -2.5 0 -1 2.5 3 1
+./data/fan_with_normals.obj fan 0 2 2 2 0 10 8 -2 -1 -2 2 0 2
+./data/venusl.obj moveable 0 0.002 0.002 0.002 -15 1 6 -2 -2 -2 2 8 2
+./data/ateneal.obj moveable 0 0.002 0.002 0.002 -15 2 12 -4 -2 -2 0 8 2

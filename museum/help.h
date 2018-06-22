@@ -462,7 +462,9 @@ public:
     static void displayFunction();
     static void idleFunction();
     static void keyboardFunction(unsigned char keycode, int x, int y);
+    static void keyboardUpFunction(unsigned char keycode, int x, int y);
     static void specialFunction(int keycode, int x, int y);
+    static void mouseDownFunction(int button, int state, int x, int y);
     static void mouseMoveFunction(int x, int y);
 
 protected:
@@ -480,11 +482,17 @@ public:
     virtual void release();
 
     void addChild(Object * child);
+    void removeChild(Object *child);
+
+    void setTag(const std::string &tag) { _tag = tag; }
+    std::string getTag() const { return _tag; }
 
     virtual void onDraw() {}
 
 protected:
     std::vector<Object *> _children;
+
+    std::string _tag;
 
 };
 
@@ -507,7 +515,9 @@ public:
     virtual void draw() {}
 
     virtual void onKeyboardPress(unsigned char keycode, int x, int y) {}
+    virtual void onKeyboardRelease(unsigned char keycode, int x, int y) {}
     virtual void onSpecialKeyboardPress(int keycode, int x, int y) {}
+    virtual void onMouseDown(int button, int state, int x, int y) {}
     virtual void onMouseMove(int x, int y) {}
     
 };
@@ -519,7 +529,7 @@ public:
 class Node : public Object {
 public:
     Mat4 _modelMatrix;
-    // Vec3 _position, _rotation, _scale;
+    Vec3 _position, _rotation, _scale;
     Mat4 _trMat, _rotMat, _sclMat;
 
 public:
@@ -528,6 +538,8 @@ public:
     void setPosition(const Vec3 &pos);
     void setRotation(float angle, const Vec3 &rot);
     void setScale(const Vec3 &s);
+
+    Vec3 getPosition() { return _position; }
 
     void transform();
 
@@ -564,27 +576,28 @@ public:
 
     Mat4 getView(); 
     Mat4 getProjection();
+    Vec3 getPosition();
 
-    void moveVertical(float delta);
-    void moveHorizontal(float delta);
-
-    void rotate(float delta);
+    void rotate(float x, float y);
 
     void setFovy(float fovy);
     float getFovy() const;
 
-private:
+public:
     Camera() {}
     ~Camera() {}
 
     static Camera _instance;
 
-    Vec3 _position          = Vec3(0, 0, 12), 
-         _frontDirection    = Vec3(0, 0, -1), 
+    Vec3 _position          = Vec3(0, 3, 6), 
+         _frontDirection    = Vec3(0, 0, 1), 
          _rightDirection    = Vec3(1, 0, 0),
          _upDirection       = Vec3(0, 1, 0);
 
+    Vec3 _fd, _rd;
+
     float _fovy = 60;
+    float _yaw = 0, _pitch = 0;
 
 };
 
@@ -701,7 +714,7 @@ public:
 
     void print();
 
-    void draw();
+    void onDraw();
 
 protected:
     bool init(const std::string &file, const std::string &vsh, const std::string &fsh);
@@ -745,6 +758,34 @@ public:
 public:
     std::vector<GLuint> _texid;
     std::vector<int> _width, _height;
+
+};
+
+#pragma endregion
+
+#pragma region AABB
+
+class AABB {
+public:
+    AABB();
+    AABB(const Vec3 &start, const Vec3 &end);
+    virtual ~AABB();
+
+    void setPosition(const Vec3 &pos);
+
+    bool isIntersect(AABB * other);
+    bool isIntersect(const Vec3 &point);
+
+    void debugDraw();
+
+public:
+    Vec3 _start, _end, _position;
+    std::vector<Vec3> _debugVertices;
+    std::vector<Color4F> _debugColors;
+    Shader * _shader;
+    Mat4 _modelMatrix;
+
+    float _frontAngle = 0;
 
 };
 

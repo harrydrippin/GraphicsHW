@@ -58,10 +58,12 @@ bool Application::initialize(int argc, char ** argv) {
     glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(Application::displayFunction);
-    glutIdleFunc(Application::idleFunction);
     glutKeyboardFunc(Application::keyboardFunction);
+    glutKeyboardUpFunc(Application::keyboardUpFunction);
     glutSpecialFunc(Application::specialFunction);
     glutPassiveMotionFunc(Application::mouseMoveFunction);
+    glutMouseFunc(Application::mouseDownFunction);
+    glutIdleFunc(Application::idleFunction);
 
     return true;
 }
@@ -94,8 +96,20 @@ void Application::keyboardFunction(unsigned char keycode, int x, int y) {
     glutPostRedisplay();
 }
 
+void Application::keyboardUpFunction(unsigned char keycode, int x, int y) {
+    SceneManager::get()->getScene()->onKeyboardRelease(keycode, x, y);
+
+    glutPostRedisplay();
+}
+
 void Application::specialFunction(int keycode, int x, int y) {
     SceneManager::get()->getScene()->onSpecialKeyboardPress(keycode, x, y);
+
+    glutPostRedisplay();
+}
+
+void Application::mouseDownFunction(int button, int state, int x, int y) {
+    SceneManager::get()->getScene()->onMouseDown(button, state, x, y);
 
     glutPostRedisplay();
 }
@@ -118,6 +132,14 @@ void Object::release() {
 
 void Object::addChild(Object * child) {
     _children.push_back(child);
+}
+
+void Object::removeChild(Object *child) {
+    auto iter = std::find(_children.begin(), _children.end(), child);
+    if (iter != _children.end()) {
+        (*iter)->release();
+        _children.erase(iter);
+    }
 }
 
 #pragma endregion
@@ -185,22 +207,33 @@ Mat4 Camera::getProjection() {
     return perspective(_fovy, 1.0f, 0.001f, 10000.0f);
 }
 
-void Camera::moveVertical(float delta) {
-    _position += _frontDirection * delta;
+Vec3 Camera::getPosition() {
+    return _position;
 }
 
-void Camera::moveHorizontal(float delta) {
-    _position += _rightDirection * delta;
-}
+void Camera::rotate(float x, float y) {
+    _yaw += x;
+    _pitch -= y;
 
-void Camera::rotate(float delta) {
-    auto ret = help::rotate(delta, 0, -1, 0) * Vec4(_frontDirection, 1);
-    _frontDirection.x = ret.x;
-    _frontDirection.y = ret.y;
-    _frontDirection.z = ret.z;
-    
-    _rightDirection = _frontDirection.cross(_upDirection);
-    _upDirection = _rightDirection.cross(_frontDirection);
+    if (_pitch > 90) _pitch = 90 - 1;
+    if (_pitch < -90) _pitch = -90 + 1;
+
+    // deg to rad
+    float yaw = _yaw * 0.0174533, pitch = _pitch * 0.0174533;
+
+    _frontDirection.x = -sin(yaw) * cos(pitch);
+    _frontDirection.y = -sin(pitch);
+    _frontDirection.z = -cos(yaw) * cos(pitch);
+
+    _rightDirection.x = -cos(yaw);
+    _rightDirection.y = 0.0;
+    _rightDirection.z = sin(yaw);
+
+    _upDirection = _frontDirection.cross(_rightDirection);
+
+    _frontDirection.normalize();
+    _rightDirection.normalize();
+    _upDirection.normalize();
 }
 
 void Camera::setFovy(float fovy) {
@@ -222,6 +255,7 @@ Node::Node() {
 }
 
 void Node::setPosition(const Vec3 &pos) {
+    _position = pos;
     _trMat = translate(pos.x, pos.y, pos.z);
 }
 
@@ -230,6 +264,7 @@ void Node::setRotation(float angle, const Vec3 &rot) {
 }
 
 void Node::setScale(const Vec3 &s) {
+    _scale = s;
     _sclMat = scale(s.x, s.y, s.z);
 }
 
@@ -661,7 +696,7 @@ Group::Group(const std::string &name) : _name(name),
 }
 
 Material::Material() : _name("Default") {
-    _ambient = Vec4(0.5, 0.5, 0.5, 1.0);
+    _ambient = Vec4(0.1, 0.1, 0.1, 1.0);
     _diffuse = Vec4(0.5, 0.5, 0.5, 1.0);
     _specular = Vec4(0.5, 0.5, 0.5, 1.0);
     _shininess = 1.0;
@@ -943,10 +978,22 @@ void Obj3D::print() {
     }	
 }
 
-void Obj3D::draw() {
+void Obj3D::onDraw() {
     transform();
     
     _shader->use();
+
+    auto projection = Camera::get()->getProjection();
+    auto viewInv    = Camera::get()->getView();
+    auto pvm        = projection * viewInv * _modelMatrix;
+
+    Mat3 norm;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            norm(i, j) = _modelMatrix(i, j); 
+        }
+    }
+    Mat4 view = viewInv.getInverse();
 
     for (size_t i = 0; i < _groups.size(); i++) {
         Group &group = _groups[i];
@@ -956,20 +1003,8 @@ void Obj3D::draw() {
         Vec4 &diffuse = mtl._diffuse;
         Vec4 &specular = mtl._specular;
         float &shininess = mtl._shininess;
-
-        auto projection = Camera::get()->getProjection();
-        auto viewInv    = Camera::get()->getView();
-        auto pvm        = projection * viewInv * _modelMatrix;
         
         glUniformMatrix4fv(_shader->getUniformLocation("u_pvm_matrix"), 1, false, pvm);
-
-        Mat3 norm;
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                norm(i, j) = _modelMatrix(i, j); 
-            }
-        }
-        Mat4 view = viewInv.getInverse();
         
         glUniformMatrix4fv(_shader->getUniformLocation("u_model_matrix"), 1, false, _modelMatrix);
         glUniformMatrix4fv(_shader->getUniformLocation("u_view_matrix"), 1, false, view);
@@ -1050,6 +1085,126 @@ void Texture::release() {
     _height.clear();
 
     delete this;
+}
+
+#pragma endregion
+
+#pragma region AABB
+
+AABB::~AABB() {
+    _shader->release();
+    _debugVertices.clear();
+    _debugColors.clear();
+}
+
+AABB::AABB() : _start(Vec3()), _end(Vec3()) {
+}
+
+AABB::AABB(const Vec3 &start, const Vec3 &end) : _start(start), _end(end) {
+    // front
+    _debugVertices.push_back(Vec3(start.x, start.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, start.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, end.y, start.z));
+    _debugVertices.push_back(Vec3(start.x, end.y, start.z));
+    //back
+    _debugVertices.push_back(Vec3(start.x, start.y, end.z));
+    _debugVertices.push_back(Vec3(end.x, start.y, end.z));
+    _debugVertices.push_back(Vec3(end.x, end.y, end.z));
+    _debugVertices.push_back(Vec3(start.x, end.y, end.z));
+    //top
+    _debugVertices.push_back(Vec3(start.x, end.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, end.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, end.y, end.z));
+    _debugVertices.push_back(Vec3(start.x, end.y, end.z));
+    //bottom
+    _debugVertices.push_back(Vec3(start.x, start.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, start.y, start.z));
+    _debugVertices.push_back(Vec3(end.x, start.y, end.z));
+    _debugVertices.push_back(Vec3(start.x, start.y, end.z));
+
+    for (int i = 0; i < _debugVertices.size(); i++) _debugColors.push_back(Color4F::RED);
+
+    float x = (end.x - start.x) * 0.5, y = (end.z - start.z) * 0.5;
+    _frontAngle = atan(x / y) * 57.2958;
+
+    string vert = "\
+        uniform mat4 u_pvm;\
+        attribute vec3 a_position;\
+        attribute vec4 a_color;\
+        varying vec4 v_color;\
+        \
+        void main() {\
+            v_color = a_color;\
+            gl_Position = u_pvm * vec4(a_position, 1.0);\
+        }\
+    ";
+
+    string frag = "\
+        varying vec4 v_color;\
+        \
+        void main() {\
+            gl_FragColor = v_color;\
+        }\
+    ";
+
+    _shader = Shader::createWithString(vert, frag);
+
+    _shader->addUniform("u_pvm");
+    _shader->addAttrib("a_position");
+    _shader->addAttrib("a_color");
+
+    _modelMatrix.setIdentity();
+}
+
+void AABB::setPosition(const Vec3 &pos) {
+    _position = pos;
+    _modelMatrix = translate(pos.x, pos.y, pos.z);// * _modelMatrix;
+}
+
+bool AABB::isIntersect(AABB *other) {
+    Vec3 min = _position + _start, max = _position + _end;
+    Vec3 otherMin = other->_position + other->_start, otherMax = other->_position + other->_end;
+
+    if (min.x <= otherMax.x && max.x >= otherMin.x && 
+        min.y <= otherMax.y && max.y >= otherMin.y && 
+        min.z <= otherMax.z && max.z >= otherMin.z) return true;
+
+    return false;
+}
+
+bool AABB::isIntersect(const Vec3 &point) {
+    Vec3 min = _position + _start, max = _position + _end;
+
+    if (point.x >= min.x && point.x <= max.x && 
+        point.y >= min.y && point.y <= max.y && 
+        point.z >= min.z && point.z <= max.z) return true;
+
+    return false;
+}
+
+void AABB::debugDraw() {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_CULL_FACE);
+
+    _shader->use();
+
+    auto projection = Camera::get()->getProjection();
+    auto viewInv    = Camera::get()->getView();
+    auto pvm        = projection * viewInv * _modelMatrix;
+
+    _shader->getUniformLocation("u_pvm");
+    glUniformMatrix4fv(_shader->getUniformLocation("u_pvm"), 1, GL_FALSE, pvm);
+
+    glVertexAttribPointer(_shader->getAttribLocation("a_position"), 3, GL_FLOAT, GL_FALSE, 0, _debugVertices.data());
+    glVertexAttribPointer(_shader->getAttribLocation("a_color"), 4, GL_FLOAT, GL_FALSE, 0, _debugColors.data());
+
+    _shader->enable();
+    glDrawArrays(GL_QUADS, 0, _debugVertices.size());
+    _shader->disable();
+
+    _shader->unUse();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_CULL_FACE);
 }
 
 #pragma endregion
