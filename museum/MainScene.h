@@ -166,7 +166,7 @@ public:
                 } else if (_objects[idx]->getTag() == "moveable") {
                     _objects[idx]->setPosition(_objects[idx]->getPosition() + Vec3(Camera::get()->_frontDirection.x, 0, Camera::get()->_frontDirection.z));
                     _aabbs[idx]->setPosition(_objects[idx]->getPosition());
-                } else {
+                } else if (_objects[idx]->getTag() == "x"){
                     eraseObject(idx);
                 }
                 // std::cout << "selected: " << _objects[idx]->getTag() << std::endl;
@@ -175,8 +175,8 @@ public:
     }
 
     void draw() {
-        playerAABB->debugDraw();
-        for (auto &i : _aabbs) i->debugDraw();
+        // playerAABB->debugDraw();
+        // for (auto &i : _aabbs) i->debugDraw();
     }
 
     void end() {
